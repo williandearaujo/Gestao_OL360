@@ -1,0 +1,708 @@
+"""
+Módulo de Segurança
+JWT, Hash de Senhas, RBAC, Auditoria
+"""
+from datetime import datetime, timedelta
+from typing import Optional, Union
+from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+import logging
+from app.config import settings
+from app.database import get_db
+
+logger = logging.getLogger(__name__)
+
+# # ============================================================================
+# # PASSWORD HASHING
+# # ============================================================================
+import bcrypt
+
+
+def hash_password(password: str) -> str:
+    """
+    Gera hash bcrypt de uma senha
+    Args:
+        password: Senha em texto plano
+    Returns:
+        str: Hash da senha
+    """
+    # Truncar para 72 bytes (limite do bcrypt)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+
+    # Gerar salt e hash
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verifica se senha corresponde ao hash
+    Args:
+        plain_password: Senha em texto plano
+        hashed_password: Hash armazenado
+    Returns:
+        bool: True se senha correta
+    """
+    # Truncar para 72 bytes
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+
+    # Verificar hash
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+# ============================================================================
+# JWT TOKENS
+# ============================================================================
+
+security = HTTPBearer()
+
+
+def create_access_token(
+    data: dict,
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Cria token JWT de acesso
+
+    Args:
+        data: Payload do token (user_id, role, etc)
+        expires_delta: Tempo de expiração customizado
+
+    Returns:
+        str: Token JWT
+    """
+    to_encode = data.copy()
+
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "access"
+    })
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM
+    )
+
+    return encoded_jwt
+
+
+def create_refresh_token(user_id: str) -> str:
+    """
+    Cria token JWT de refresh
+
+    Args:
+        user_id: ID do usuário
+
+    Returns:
+        str: Refresh token
+    """
+    expire = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+
+    to_encode = {
+        "sub": user_id,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "refresh"
+    }
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM
+    )
+
+    return encoded_jwt
+
+
+def decode_token(token: str) -> dict:
+    """
+    Decodifica e valida token JWT
+
+    Args:
+        token: Token JWT
+
+    Returns:
+        dict: Payload do token
+
+    Raises:
+        HTTPException: Se token inválido ou expirado
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM]
+        )
+        return payload
+    except JWTError as e:
+        logger.warning(f"Token inválido: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+# ============================================================================
+# AUTHENTICATION DEPENDENCY
+# ============================================================================
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """
+    Dependency para obter usuário autenticado
+
+    Usage:
+        @router.get("/me")
+        def get_me(current_user = Depends(get_current_user)):
+            return current_user
+    """
+    token = credentials.credentials
+
+    # Decodificar token
+    payload = decode_token(token)
+
+    # Verificar tipo do token
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tipo de token inválido"
+        )
+
+    # Obter user_id do token
+    user_id: str = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
+
+    # Buscar usuário no banco
+    from app.models.user import User
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário não encontrado"
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo"
+        )
+
+    return user
+
+
+async def get_current_active_user(
+    current_user = Depends(get_current_user)
+):
+    """
+    Dependency que garante usuário ativo
+    """
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo"
+        )
+    return current_user
+
+
+# ============================================================================
+# ROLE-BASED ACCESS CONTROL (RBAC)
+# ============================================================================
+
+class RoleChecker:
+    """
+    Classe para verificar roles de usuário
+
+    Usage:
+        @router.get("/admin")
+        def admin_route(user = Depends(RoleChecker(["DIRETORIA", "ADMIN_GESTAO"]))):
+            return {"message": "Admin area"}
+    """
+
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, current_user = Depends(get_current_user)):
+        if current_user.role not in self.allowed_roles:
+            logger.warning(
+                f"Acesso negado: user {current_user.id} "
+                f"(role: {current_user.role}) tentou acessar rota restrita"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Acesso negado. Roles permitidas: {', '.join(self.allowed_roles)}"
+            )
+        return current_user
+
+
+# Helpers para roles específicas
+def require_diretoria(current_user = Depends(get_current_user)):
+    """Requer role DIRETORIA"""
+    if current_user.role != "DIRETORIA":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito à Diretoria"
+        )
+    return current_user
+
+
+def require_gerente_or_above(current_user = Depends(get_current_user)):
+    """Requer role GERENTE ou DIRETORIA"""
+    if current_user.role not in ["GERENTE", "DIRETORIA"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a Gerentes e Diretoria"
+        )
+    return current_user
+
+
+def require_admin_gestao(current_user = Depends(get_current_user)):
+    """Requer role ADMIN_GESTAO"""
+    if current_user.role != "ADMIN_GESTAO":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a Administradores"
+        )
+    return current_user
+
+
+# ============================================================================
+# FIELD-LEVEL RBAC
+# ============================================================================
+
+class FieldAccessControl:
+    """
+    Controle de acesso a nível de campo
+
+    Define quais campos cada role pode ver/editar
+    """
+
+    # Campos sensíveis por entidade
+    SENSITIVE_FIELDS = {
+        "employee.py": {
+            "cpf": ["DIRETORIA", "GERENTE"],
+            "rg": ["DIRETORIA", "GERENTE"],
+            "data_nascimento": ["DIRETORIA", "GERENTE"],
+            "telefone_pessoal": ["DIRETORIA", "GERENTE"],
+            "email_pessoal": ["DIRETORIA", "GERENTE"],
+            "endereco": ["DIRETORIA", "GERENTE"],
+        },
+        "salary": ["DIRETORIA", "GERENTE"],  # Todo o objeto é sensível
+        "pdi": ["DIRETORIA", "GERENTE"],  # Apenas gerente e diretoria
+        "one_to_one": ["DIRETORIA", "GERENTE"],
+    }
+
+    @classmethod
+    def can_access_field(
+        cls,
+        entity: str,
+        field: str,
+        user_role: str,
+        is_own_data: bool = False
+    ) -> bool:
+        """
+        Verifica se usuário pode acessar campo
+
+        Args:
+            entity: Nome da entidade (employee.py, salary, etc)
+            field: Nome do campo
+            user_role: Role do usuário
+            is_own_data: Se são dados do próprio usuário
+
+        Returns:
+            bool: True se pode acessar
+        """
+        # Diretoria sempre pode
+        if user_role == "DIRETORIA":
+            return True
+
+        # Próprios dados (alguns campos)
+        if is_own_data and entity == "employee.py":
+            public_fields = ["email_corporativo", "telefone_corporativo", "cargo"]
+            if field in public_fields:
+                return True
+
+        # Verificar regras específicas
+        if entity in cls.SENSITIVE_FIELDS:
+            if isinstance(cls.SENSITIVE_FIELDS[entity], dict):
+                allowed_roles = cls.SENSITIVE_FIELDS[entity].get(field, [])
+                return user_role in allowed_roles
+            else:
+                # Entity inteira é sensível
+                allowed_roles = cls.SENSITIVE_FIELDS[entity]
+                return user_role in allowed_roles
+
+        # Campo não é sensível
+        return True
+
+    @classmethod
+    def filter_sensitive_fields(
+        cls,
+        data: dict,
+        entity: str,
+        user_role: str,
+        is_own_data: bool = False
+    ) -> dict:
+        """
+        Remove campos sensíveis de um dicionário
+
+        Args:
+            data: Dicionário com dados
+            entity: Nome da entidade
+            user_role: Role do usuário
+            is_own_data: Se são dados do próprio usuário
+
+        Returns:
+            dict: Dados filtrados
+        """
+        filtered = data.copy()
+
+        for field in list(filtered.keys()):
+            if not cls.can_access_field(entity, field, user_role, is_own_data):
+                # Mascarar campo
+                if settings.MASK_CPF and field == "cpf":
+                    filtered[field] = cls.mask_cpf(filtered[field])
+                else:
+                    filtered[field] = "***"
+
+        return filtered
+
+    @staticmethod
+    def mask_cpf(cpf: str) -> str:
+        """Mascara CPF: 123.456.789-00 -> ***.***.***-00"""
+        if not cpf or len(cpf) < 4:
+            return "***"
+        return f"***.***.***-{cpf[-2:]}"
+
+    @staticmethod
+    def mask_salary(salary: float) -> str:
+        """Mascara salário"""
+        return "R$ *****"
+
+
+# ============================================================================
+# AUDITORIA
+# ============================================================================
+
+async def log_access(
+    request: Request,
+    user,
+    resource: str,
+    action: str,
+    db: Session
+):
+    """
+    Registra acesso a dados sensíveis
+
+    Args:
+        request: Request do FastAPI
+        user: Usuário atual
+        resource: Recurso acessado
+        action: Ação realizada (READ, WRITE, DELETE)
+        db: Sessão do banco
+    """
+    if not settings.AUDIT_ENABLED:
+        return
+
+    from app.models.audit import AuditLog
+
+    audit = AuditLog(
+        user_id=user.id,
+        acao=action,
+        tabela=resource,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    db.add(audit)
+    db.commit()
+
+    logger.info(f"Audit: {user.email} - {action} - {resource}")
+
+
+# ============================================================================
+# RATE LIMITING (Simples)
+# ============================================================================
+
+from collections import defaultdict
+from time import time
+
+# Cache de requisições por IP
+request_counts = defaultdict(list)
+
+
+def check_rate_limit(request: Request, limit: int = 60, window: int = 60):
+    """
+    Verifica rate limit simples por IP
+
+    Args:
+        request: Request do FastAPI
+        limit: Número máximo de requests
+        window: Janela de tempo em segundos
+
+    Raises:
+        HTTPException: Se exceder limite
+    """
+    if not request.client:
+        return
+
+    ip = request.client.host
+    now = time()
+
+    # Limpar requests antigos
+    request_counts[ip] = [
+        timestamp for timestamp in request_counts[ip]
+        if now - timestamp < window
+    ]
+
+    # Verificar limite
+    if len(request_counts[ip]) >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit excedido. Máximo {limit} requisições por {window}s"
+        )
+
+    # Registrar request
+    request_counts[ip].append(now)
+
+
+# ============================================================================
+# HELPERS DE AUTORIZAÇÃO
+# ============================================================================
+
+def can_manage_employee(current_user, target_employee) -> bool:
+    """
+    Verifica se usuário pode gerenciar colaborador
+
+    Args:
+        current_user: Usuário atual
+        target_employee: Colaborador alvo
+
+    Returns:
+        bool: True se pode gerenciar
+    """
+    # Diretoria pode tudo
+    if current_user.role == "DIRETORIA":
+        return True
+
+    # Gerente pode gerenciar subordinados
+    if current_user.role == "GERENTE":
+        from app.models.employee import Employee
+        # Verificar se current_user é gerente do target_employee
+        if hasattr(current_user, 'employee.py'):
+            return target_employee.manager_id == current_user.employee.id
+
+    # Próprio usuário pode ver seus dados (mas não sensíveis)
+    if hasattr(current_user, 'employee.py'):
+        return current_user.employee.id == target_employee.id
+
+    return False
+
+
+def is_manager_of(current_user, employee_id: str) -> bool:
+    """
+    Verifica se usuário é gerente de um colaborador
+
+    Args:
+        current_user: Usuário atual
+        employee_id: ID do colaborador
+
+    Returns:
+        bool: True se é gerente
+    """
+    if current_user.role == "DIRETORIA":
+        return True
+
+    if current_user.role == "GERENTE" and hasattr(current_user, 'employee.py'):
+        from app.models.employee import Employee
+        from app.database import SessionLocal
+
+        db = SessionLocal()
+        try:
+            employee = db.query(Employee).filter(Employee.id == employee_id).first()
+            if employee:
+                return employee.manager_id == current_user.employee.id
+        finally:
+            db.close()
+
+    return False
+
+
+# ============================================================================
+# IP WHITELIST (Opcional)
+# ============================================================================
+
+WHITELISTED_IPS = [
+    "127.0.0.1",
+    "::1",
+]
+
+
+def check_ip_whitelist(request: Request, whitelist: list[str] = WHITELISTED_IPS):
+    """
+    Verifica se IP está na whitelist
+
+    Args:
+        request: Request do FastAPI
+        whitelist: Lista de IPs permitidos
+
+    Raises:
+        HTTPException: Se IP não autorizado
+    """
+    if not request.client:
+        return
+
+    ip = request.client.host
+
+    # Desenvolvimento: sempre permitir
+    if settings.ENVIRONMENT == "development":
+        return
+
+    if ip not in whitelist:
+        logger.warning(f"IP não autorizado tentou acessar: {ip}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IP não autorizado"
+        )
+
+
+# ============================================================================
+# TOKEN REFRESH
+# ============================================================================
+
+def refresh_access_token(refresh_token: str, db: Session) -> dict:
+    """
+    Gera novo access token a partir de refresh token
+
+    Args:
+        refresh_token: Refresh token válido
+        db: Sessão do banco
+
+    Returns:
+        dict: Novo access token e refresh token
+
+    Raises:
+        HTTPException: Se refresh token inválido
+    """
+    # Decodificar refresh token
+    payload = decode_token(refresh_token)
+
+    # Verificar tipo
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
+
+    # Obter user_id
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
+
+    # Buscar usuário
+    from app.models.user import User
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário inválido ou inativo"
+        )
+
+    # Gerar novos tokens
+    new_access_token = create_access_token(
+        data={"sub": str(user.id), "role": user.role}
+    )
+    new_refresh_token = create_refresh_token(str(user.id))
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
+    }
+
+
+# ============================================================================
+# LOGOUT / TOKEN BLACKLIST (Simples)
+# ============================================================================
+
+# Em produção, usar Redis ou cache distribuído
+blacklisted_tokens = set()
+
+
+def blacklist_token(token: str):
+    """
+    Adiciona token à blacklist
+
+    Args:
+        token: Token a invalidar
+    """
+    blacklisted_tokens.add(token)
+
+
+def is_token_blacklisted(token: str) -> bool:
+    """
+    Verifica se token está na blacklist
+
+    Args:
+        token: Token a verificar
+
+    Returns:
+        bool: True se está na blacklist
+    """
+    return token in blacklisted_tokens
+
+
+# ============================================================================
+# EXPORT
+# ============================================================================
+
+__all__ = [
+    'hash_password',
+    'verify_password',
+    'validate_password_strength',
+    'create_access_token',
+    'create_refresh_token',
+    'decode_token',
+    'get_current_user',
+    'get_current_active_user',
+    'RoleChecker',
+    'require_diretoria',
+    'require_gerente_or_above',
+    'require_admin_gestao',
+    'FieldAccessControl',
+    'log_access',
+    'check_rate_limit',
+    'can_manage_employee',
+    'is_manager_of',
+    'check_ip_whitelist',
+    'refresh_access_token',
+    'blacklist_token',
+    'is_token_blacklisted',
+]
