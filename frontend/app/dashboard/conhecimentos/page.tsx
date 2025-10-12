@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, Award, Plus, Search, Filter, Calendar, AlertCircle } from 'lucide-react'
+import { BookOpen, Award, Plus, Search, Calendar, AlertCircle } from 'lucide-react'
 
 type KnowledgeType = 'certificacao' | 'curso' | 'formacao' | 'treinamento'
 
@@ -247,169 +247,7 @@ export default function ConhecimentosPage() {
       </div>
 
       {/* Lista de Conhecimentos */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4">Carregando conhecimentos...</p>
-        </div>
-      ) : filteredKnowledge.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Nenhum conhecimento encontrado
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Tente ajustar os filtros ou adicione um novo conhecimento
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredKnowledge.map(item => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              {/* Header do Card */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-3xl">{getTypeIcon(item.tipo)}</span>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                      {item.nome}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">{item.fornecedor}</span>
-                      <span>•</span>
-                      <span>{item.area}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {item.obrigatorio && (
-                  <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                    OBRIGATÓRIO
-                  </span>
-                )}
-              </div>
-
-              {/* Descrição */}
-              <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm line-clamp-2">
-                {item.descricao}
-              </p>
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(item.dificuldade)}`}>
-                  {item.dificuldade.charAt(0).toUpperCase() + item.dificuldade.slice(1)}
-                </span>
-
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
-                  {getTypeLabel(item.tipo)}
-                </span>
-
-                {item.carga_horaria && (
-                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {item.carga_horaria}h
-                  </span>
-                )}
-
-                {item.validade_meses && (
-                  <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
-                    Validade: {item.validade_meses} meses
-                  </span>
-                )}
-              </div>
-
-              {/* Estatísticas de Vínculos */}
-              {(item.total_vinculos !== undefined) && (
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {item.total_vinculos}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">
-                        {item.vinculos_ativos || 0}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Ativos</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-red-600">
-                        {item.vinculos_vencidos || 0}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Vencidos</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Informações Adicionais */}
-              <div className="flex items-center justify-between text-sm">
-                {item.custo_estimado && (
-                  <span className="text-gray-600 dark:text-gray-400">
-                    💰 R$ {item.custo_estimado.toFixed(2)}
-                  </span>
-                )}
-
-                <div className="flex gap-2">
-                  <button className="px-3 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-medium">
-                    Ver Detalhes
-                  </button>
-                  <button className="px-3 py-1 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                    Editar
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-
-          {/* Filtro de Tipo */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as KnowledgeType | 'all')}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="all">Todos os Tipos</option>
-            <option value="certificacao">Certificações</option>
-            <option value="curso">Cursos</option>
-            <option value="formacao">Formações</option>
-            <option value="treinamento">Treinamentos</option>
-          </select>
-
-          {/* Filtro de Área */}
-          <select
-            value={areaFilter}
-            onChange={(e) => setAreaFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="all">Todas as Áreas</option>
-            {areas.map(area => (
-              <option key={area} value={area}>{area}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Lista de Conhecimentos */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4">Carregando conhecimentos...</p>
-        </div>
-      ) : filteredKnowledge.length === 0 ? (
+      {filteredKnowledge.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
           <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -489,13 +327,13 @@ value)}
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-green-600">
-                      {item.vinculos_ativos}
+                      {item.vinculos_ativos || 0}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">Ativos</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-red-600">
-                      {item.vinculos_vencidos}
+                      {item.vinculos_vencidos || 0}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">Vencidos</p>
                   </div>

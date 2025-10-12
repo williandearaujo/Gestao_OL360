@@ -14,7 +14,7 @@ from app.core.security import (
     get_current_user
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/auth")
 
 class LoginRequest(BaseModel):
     email: EmailStr

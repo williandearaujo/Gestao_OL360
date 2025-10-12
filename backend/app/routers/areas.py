@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/areas", tags=["Áreas"])
 
-
 @router.get("/")
 async def list_areas():
     """Listar todas as áreas"""
@@ -30,7 +29,6 @@ async def list_areas():
         logger.error(f"Erro ao listar áreas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/{area_id}")
 async def get_area(area_id: int):
     """Obter detalhes de uma área"""
@@ -41,18 +39,15 @@ async def get_area(area_id: int):
     except Exception as e:
         raise HTTPException(status_code=404, detail="Área não encontrada")
 
-
 @router.post("/")
 async def create_area(data: Dict[str, Any]):
     """Criar nova área"""
     return {"success": True, "message": "Área criada com sucesso", "data": data}
 
-
 @router.put("/{area_id}")
 async def update_area(area_id: int, data: Dict[str, Any]):
     """Atualizar área"""
     return {"success": True, "message": "Área atualizada com sucesso"}
-
 
 @router.delete("/{area_id}")
 async def delete_area(area_id: int):

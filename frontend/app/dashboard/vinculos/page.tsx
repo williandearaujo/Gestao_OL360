@@ -11,19 +11,6 @@ interface EmployeeKnowledgeLink {
   employee_name: string
   employee_cargo: string
   knowledge_id: number
-  knowledge_'use client'
-
-import { useState, useEffect } from 'react'
-import { Link as LinkIcon, Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react'
-
-type LinkStatus = 'valido' | 'expirando' | 'vencido' | 'em_andamento'
-
-interface EmployeeKnowledgeLink {
-  id: number
-  employee_id: number
-  employee_name: string
-  employee_cargo: string
-  knowledge_id: number
   knowledge_name: string
   knowledge_type: string
   knowledge_vendor: string

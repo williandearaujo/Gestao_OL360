@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from datetime import date
 from uuid import UUID
 
-router = APIRouter(prefix="/api/employees", tags=["employees"])
+router = APIRouter(prefix="/employees", tags=["employees"])
 
 # ============================================================================
 # SCHEMAS
