@@ -1,38 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, CheckCircle, Search } from 'lucide-react'
-import { getColaboradores, deleteColaborador, type Colaborador } from '@/lib/api'
-import Link from 'next/link'
+import { Users, CheckCircle, Search, Plus, Clock, Award, Link as LinkIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-const StatCard = ({
-  name,
-  value,
-  icon,
-  color,
-}: {
-  name: string
-  value: string | number
-  icon: React.ReactNode
-  color: string
-}) => (
-  <div
-    className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow border-l-4"
-    style={{ borderColor: color }}
-  >
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium mb-1">{name}</p>
-        <p className="text-3xl font-bold text-ol-black dark:text-darkOl-white">{value}</p>
-      </div>
-      <div className="text-4xl text-ol-grayMedium dark:text-darkOl-grayMedium">{icon}</div>
-    </div>
-  </div>
-)
+interface Colaborador {
+  id: number
+  nome: string
+  email: string
+  cargo: string
+  departamento?: string
+  area?: string
+  status: string
+  data_admissao: string
+  team_id?: number
+  manager_id?: number
+}
 
 export default function ColaboradoresPage() {
+  const router = useRouter()
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -41,160 +30,294 @@ export default function ColaboradoresPage() {
 
   const loadColaboradores = async () => {
     try {
-      const data = await getColaboradores()
-      setColaboradores(data)
-    } catch (error: any) {
-      console.error('Erro ao carregar colaboradores:', error)
-      alert(error.message)
+      setLoading(true)
+      setError(null)
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${API_URL}/api/employees`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      // A API pode retornar { data: [...] } ou diretamente [...]
+      const colaboradoresData = data.data || data
+
+      console.log('✅ Colaboradores carregados:', colaboradoresData)
+      setColaboradores(Array.isArray(colaboradoresData) ? colaboradoresData : [])
+
+    } catch (err: any) {
+      console.error('❌ Erro ao carregar colaboradores:', err)
+      setError(err.message || 'Erro ao carregar colaboradores')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir este colaborador?')) return
 
     try {
-      await deleteColaborador(id)
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${API_URL}/api/employees/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir colaborador')
+      }
+
       alert('Colaborador excluído com sucesso!')
       loadColaboradores()
-    } catch (error: any) {
-      alert(error.message)
+    } catch (err: any) {
+      alert(err.message)
     }
   }
 
-  const filteredColaboradores = colaboradores.filter(
-    (col) =>
-      col.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      col.email_corporativo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      col.cargo.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredColaboradores = colaboradores.filter(col =>
+    col.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    col.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    col.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const stats = {
+    total: colaboradores.length,
+    ativos: colaboradores.filter(c => c.status === 'ativo').length,
+    ferias: colaboradores.filter(c => c.status === 'ferias').length,
+    afastados: colaboradores.filter(c => c.status === 'afastado').length
+  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ol-primary"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando colaboradores...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
+              ❌ Erro ao carregar colaboradores
+            </h2>
+            <p className="text-red-600 dark:text-red-300 mb-4">{error}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={loadColaboradores}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Tentar Novamente
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Voltar ao Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-ol-bg dark:bg-darkOl-bg min-h-screen p-6 text-ol-black dark:text-darkOl-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">{`Colaboradores`}</h1>
-        <p className="text-ol-grayMedium dark:text-darkOl-grayMedium mt-2">Gerencie os colaboradores da empresa</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <Users className="w-8 h-8 text-blue-600" />
+              Colaboradores
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Gestão completa de colaboradores • {stats.total} cadastrados
+            </p>
+          </div>
+
+          <button
+            onClick={() => router.push('/dashboard/colaboradores/novo')}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-semibold"
+          >
+            <Plus className="w-5 h-5" />
+            Novo Colaborador
+          </button>
+        </div>
       </div>
 
-      {/* Top Actions */}
-      <div className="flex justify-end mb-6">
-        <Link
-          href="/dashboard/colaboradores/novo"
-          className="bg-ol-primary text-white px-6 py-3 rounded-lg hover:bg-ol-hover hover:text-ol-hoverText transition-colors font-semibold shadow-lg flex items-center space-x-2"
-        >
-          <span>➕</span>
-          <span>Novo Colaborador</span>
-        </Link>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
+            </div>
+            <Users className="w-12 h-12 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Ativos</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{stats.ativos}</p>
+            </div>
+            <CheckCircle className="w-12 h-12 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Em Férias</p>
+              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.ferias}</p>
+            </div>
+            <Clock className="w-12 h-12 text-orange-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Afastados</p>
+              <p className="text-3xl font-bold text-red-600 mt-1">{stats.afastados}</p>
+            </div>
+            <Award className="w-12 h-12 text-red-600" />
+          </div>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-8">
-        <input
-          type="text"
-          placeholder="Buscar por nome, email ou cargo..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 dark:border-darkOl-border rounded-lg focus:ring-2 focus:ring-ol-primary focus:border-transparent text-ol-black dark:text-darkOl-white bg-white dark:bg-darkOl-grayLight transition-colors"
-        />
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard name="Total de Colaboradores" value={colaboradores.length} icon={<Users />} color="#3b82f6" />
-        <StatCard
-          name="Ativos"
-          value={colaboradores.filter((c) => c.status === 'ATIVO').length}
-          icon={<CheckCircle />}
-          color="#22c55e"
-        />
-        <StatCard name="Resultados da Busca" value={filteredColaboradores.length} icon={<Search />} color="#3b82f6" />
+      {/* Search */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, email ou cargo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-ol-white dark:bg-darkOl-grayLight rounded-xl shadow-lg overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-darkOl-border">
-          <thead className="bg-gray-50 dark:bg-darkOl-grayMedium">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-darkOl-grayLight uppercase tracking-wider">Nome</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-darkOl-grayLight uppercase tracking-wider">Cargo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-darkOl-grayLight uppercase tracking-wider">Departamento</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-darkOl-grayLight uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-darkOl-grayLight uppercase tracking-wider">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="bg-ol-white dark:bg-darkOl-grayLight divide-y divide-gray-200 dark:divide-darkOl-border">
-            {filteredColaboradores.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-darkOl-grayLight">
-                  <div className="text-4xl mb-2">📭</div>
-                  <p>Nenhum colaborador encontrado</p>
-                  {searchTerm && <p className="text-sm mt-2">Tente outro termo de busca</p>}
-                </td>
-              </tr>
-            ) : (
-              filteredColaboradores.map((colaborador) => (
-                <tr key={colaborador.id} className="hover:bg-gray-50 dark:hover:bg-darkOl-bg/30 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-ol-black dark:text-darkOl-white">{colaborador.nome_completo}</div>
-                      <div className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">{colaborador.email_corporativo}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ol-black dark:text-darkOl-white">{colaborador.cargo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ol-black dark:text-darkOl-white">{colaborador.departamento}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        colaborador.status === 'ATIVO'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
-                          : colaborador.status === 'FERIAS'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                          : colaborador.status === 'AFASTADO'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200'
-                      }`}
-                    >
-                      {colaborador.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                    <Link
-                      href={`/dashboard/colaboradores/${colaborador.id}`}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-white transition-colors"
-                      title="Ver detalhes"
-                    >
-                      Ver
-                    </Link>
-                    <Link
-                      href={`/dashboard/colaboradores/${colaborador.id}/editar`}
-                      className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-white transition-colors"
-                      title="Editar colaborador"
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(colaborador.id!)}
-                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-white transition-colors"
-                      title="Excluir colaborador"
-                    >
-                      Excluir
-                    </button>
-                  </td>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        {filteredColaboradores.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Nenhum colaborador encontrado
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {searchTerm ? 'Tente outro termo de busca' : 'Adicione o primeiro colaborador'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Colaborador
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Cargo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Área
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Ações
+                  </th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredColaboradores.map((col) => (
+                  <tr key={col.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {col.nome}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {col.email}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {col.cargo}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {col.departamento || col.area || 'N/A'}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                        col.status === 'ativo' ? 'bg-green-100 text-green-800' :
+                        col.status === 'ferias' ? 'bg-orange-100 text-orange-800' :
+                        col.status === 'afastado' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {col.status?.toUpperCase() || 'INATIVO'}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => router.push(`/dashboard/colaboradores/${col.id}`)}
+                          className="text-blue-600 hover:text-blue-900 font-medium"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={() => router.push(`/dashboard/colaboradores/${col.id}/editar`)}
+                          className="text-gray-600 hover:text-gray-900 font-medium"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(col.id)}
+                          className="text-red-600 hover:text-red-900 font-medium"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
