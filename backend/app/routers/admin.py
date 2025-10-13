@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Administração"])
 
-
 @router.get("/")
 async def admin_root():
     """Endpoint raiz do admin"""
@@ -21,7 +20,6 @@ async def admin_root():
         "version": "2.0.0",
         "status": "active"
     }
-
 
 @router.get("/dashboard")
 async def get_admin_dashboard():
@@ -87,13 +85,12 @@ async def get_admin_dashboard():
             detail=f"Erro ao carregar dashboard: {str(e)}"
         )
 
-
 @router.get("/users")
 async def list_users(
-        skip: int = 0,
-        limit: int = 100,
-        role: Optional[str] = None,
-        is_active: Optional[bool] = None
+    skip: int = 0,
+    limit: int = 100,
+    role: Optional[str] = None,
+    is_active: Optional[bool] = None
 ):
     """Listar usuários do sistema"""
     try:
@@ -124,7 +121,6 @@ async def list_users(
         logger.error(f"❌ Erro ao listar usuários: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/system/health")
 async def system_health():
     """Verificação de saúde do sistema"""
@@ -140,11 +136,10 @@ async def system_health():
         "timestamp": datetime.now().isoformat()
     }
 
-
 @router.get("/system/logs")
 async def get_system_logs(
-        level: Optional[str] = None,
-        limit: int = 100
+    level: Optional[str] = None,
+    limit: int = 100
 ):
     """Obter logs do sistema"""
     try:
@@ -166,7 +161,6 @@ async def get_system_logs(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/users")
 async def create_user(user_data: Dict[str, Any]):
     """Criar novo usuário"""
@@ -184,7 +178,6 @@ async def create_user(user_data: Dict[str, Any]):
         logger.error(f"❌ Erro ao criar usuário: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.put("/users/{user_id}")
 async def update_user(user_id: int, user_data: Dict[str, Any]):
     """Atualizar usuário"""
@@ -199,7 +192,6 @@ async def update_user(user_id: int, user_data: Dict[str, Any]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int):
     """Deletar usuário"""
@@ -213,7 +205,6 @@ async def delete_user(user_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/statistics")
 async def get_statistics():

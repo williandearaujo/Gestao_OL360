@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 interface Colaborador {
   id: number
-  nome: string
+  nome_completo: string
   email: string
   cargo: string
   departamento?: string
@@ -89,7 +89,7 @@ export default function ColaboradoresPage() {
   }
 
   const filteredColaboradores = colaboradores.filter(col =>
-    col.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    col.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     col.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     col.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -263,7 +263,7 @@ export default function ColaboradoresPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {col.nome}
+                          {col.nome_completo}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           {col.email}

@@ -1,383 +1,443 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Link as LinkIcon, Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Link as LinkIcon, Plus, Edit, Trash2, Users, BookOpen, Target, Calendar } from 'lucide-react'
 
-type LinkStatus = 'valido' | 'expirando' | 'vencido' | 'em_andamento'
-
-interface EmployeeKnowledgeLink {
-  id: number
-  employee_id: number
-  employee_name: string
-  employee_cargo: string
-  knowledge_id: number
-  knowledge_name: string
-  knowledge_type: string
-  knowledge_vendor: string
-  status: LinkStatus
-  data_obtencao?: string
-  data_validade?: string
+interface Vinculo {
+  id: string
+  colaborador_id: string
+  colaborador_nome: string
+  conhecimento_id: string
+  conhecimento_nome: string
+  status: string
   data_inicio?: string
-  data_conclusao?: string
+  data_alvo?: string
+  data_obtencao?: string
   progresso: number
-  certificado_url?: string
-  observacoes?: string
-  dias_restantes?: number
-  criado_por: string
-  created_at: string
+  observacoes: string
 }
 
-export default function VinculosPage() {
-  const [links, setLinks] = useState<EmployeeKnowledgeLink[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<LinkStatus | 'all'>('all')
+interface Colaborador {
+  id: string
+  nome: string
+  cargo: string
+}
 
-  useEffect(() => {
-    fetchLinks()
-  }, [])
+interface Conhecimento {
+  id: string
+  nome: string
+  tipo: string
+}
 
-  const fetchLinks = async () => {
-    try {
-      setLoading(true)
+export default function EmployeeKnowledgeLinksPage() {
+  // Mock de dados
+  const [colaboradores] = useState<Colaborador[]>([
+    { id: '1', nome: 'João Silva', cargo: 'Desenvolvedor' },
+    { id: '2', nome: 'Maria Santos', cargo: 'Designer' },
+    { id: '3', nome: 'Pedro Costa', cargo: 'Analista' }
+  ])
 
-      // Mock de dados
-      const mockLinks: EmployeeKnowledgeLink[] = [
-        {
-          id: 1,
-          employee_id: 1,
-          employee_name: 'João Silva',
-          employee_cargo: 'Desenvolvedor Senior',
-          knowledge_id: 1,
-          knowledge_name: 'AWS Solutions Architect',
-          knowledge_type: 'Certificação',
-          knowledge_vendor: 'Amazon Web Services',
-          status: 'expirando',
-          data_obtencao: '2022-11-15',
-          data_validade: '2025-11-15',
-          progresso: 100,
-          dias_restantes: 35,
-          criado_por: 'Admin',
-          created_at: '2022-11-15T10:00:00'
-        },
-        {
-          id: 2,
-          employee_id: 2,
-          employee_name: 'Maria Santos',
-          employee_cargo: 'Tech Lead',
-          knowledge_id: 2,
-          knowledge_name: 'ITIL Foundation',
-          knowledge_type: 'Certificação',
-          knowledge_vendor: 'Axelos',
-          status: 'valido',
-          data_obtencao: '2024-03-20',
-          data_validade: '2027-03-20',
-          progresso: 100,
-          dias_restantes: 850,
-          criado_por: 'Admin',
-          created_at: '2024-03-20T10:00:00'
-        },
-        {
-          id: 3,
-          employee_id: 3,
-          employee_name: 'Carlos Oliveira',
-          employee_cargo: 'Desenvolvedor Pleno',
-          knowledge_id: 3,
-          knowledge_name: 'Python para Data Science',
-          knowledge_type: 'Curso',
-          knowledge_vendor: 'Coursera',
-          status: 'em_andamento',
-          data_inicio: '2025-09-01',
-          progresso: 65,
-          criado_por: 'Carlos Oliveira',
-          created_at: '2025-09-01T10:00:00'
-        },
-        {
-          id: 4,
-          employee_id: 5,
-          employee_name: 'Pedro Lima',
-          employee_cargo: 'Analista de Infraestrutura',
-          knowledge_id: 2,
-          knowledge_name: 'ITIL Foundation',
-          knowledge_type: 'Certificação',
-          knowledge_vendor: 'Axelos',
-          status: 'vencido',
-          data_obtencao: '2021-10-05',
-          data_validade: '2024-10-05',
-          progresso: 100,
-          dias_restantes: -7,
-          criado_por: 'Admin',
-          created_at: '2021-10-05T10:00:00'
-        },
-        {
-          id: 5,
-          employee_id: 4,
-          employee_name: 'Ana Costa',
-          employee_cargo: 'Scrum Master',
-          knowledge_id: 4,
-          knowledge_name: 'Scrum Master Certified',
-          knowledge_type: 'Certificação',
-          knowledge_vendor: 'Scrum Alliance',
-          status: 'valido',
-          data_obtencao: '2024-06-10',
-          data_validade: '2026-06-10',
-          progresso: 100,
-          dias_restantes: 610,
-          criado_por: 'Admin',
-          created_at: '2024-06-10T10:00:00'
-        }
-      ]
+  const [conhecimentos] = useState<Conhecimento[]>([
+    { id: '1', nome: 'React Avançado', tipo: 'HABILIDADE' },
+    { id: '2', nome: 'Certificação AWS', tipo: 'CERTIFICACAO' },
+    { id: '3', nome: 'Inglês Intermediário', tipo: 'IDIOMA' }
+  ])
 
-      setLinks(mockLinks)
-    } catch (error) {
-      console.error('Erro ao buscar vínculos:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const filteredLinks = links.filter(link => {
-    const matchesSearch =
-      link.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      link.knowledge_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      link.knowledge_vendor.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === 'all' || link.status === statusFilter
-
-    return matchesSearch && matchesStatus
+  const [vinculos, setVinculos] = useState<Vinculo[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [editando, setEditando] = useState<Vinculo | null>(null)
+  const [novoVinculo, setNovoVinculo] = useState<Partial<Vinculo>>({
+    colaborador_id: '',
+    conhecimento_id: '',
+    status: 'EM_DESENVOLVIMENTO',
+    progresso: 0,
+    observacoes: ''
   })
 
-  const stats = {
-    total: links.length,
-    validos: links.filter(l => l.status === 'valido').length,
-    expirando: links.filter(l => l.status === 'expirando').length,
-    vencidos: links.filter(l => l.status === 'vencido').length,
-    em_andamento: links.filter(l => l.status === 'em_andamento').length
-  }
+  const statusOptions = [
+    { value: 'PLANEJADO', label: 'Planejado', color: 'bg-gray-100 text-gray-800' },
+    { value: 'EM_DESENVOLVIMENTO', label: 'Em Desenvolvimento', color: 'bg-blue-100 text-blue-800' },
+    { value: 'OBTIDO', label: 'Obtido', color: 'bg-green-100 text-green-800' },
+    { value: 'EXPIRADO', label: 'Expirado', color: 'bg-red-100 text-red-800' }
+  ]
 
-  const getStatusBadge = (status: LinkStatus) => {
-    const badges = {
-      valido: { bg: 'bg-green-100', text: 'text-green-800', icon: <CheckCircle className="w-4 h-4" />, label: 'Válido' },
-      expirando: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <Clock className="w-4 h-4" />, label: 'Expirando' },
-      vencido: { bg: 'bg-red-100', text: 'text-red-800', icon: <XCircle className="w-4 h-4" />, label: 'Vencido' },
-      em_andamento: { bg: 'bg-blue-100', text: 'text-blue-800', icon: <Clock className="w-4 h-4" />, label: 'Em Andamento' }
+  const handleSalvar = () => {
+    const colaborador = colaboradores.find(c => c.id === novoVinculo.colaborador_id)
+    const conhecimento = conhecimentos.find(c => c.id === novoVinculo.conhecimento_id)
+
+    if (!colaborador || !conhecimento) return
+
+    if (editando) {
+      setVinculos(vinculos.map(v =>
+        v.id === editando.id
+          ? {
+              ...v,
+              ...novoVinculo,
+              colaborador_nome: colaborador.nome,
+              conhecimento_nome: conhecimento.nome
+            } as Vinculo
+          : v
+      ))
+    } else {
+      const vinculo: Vinculo = {
+        id: Date.now().toString(),
+        colaborador_id: novoVinculo.colaborador_id || '',
+        colaborador_nome: colaborador.nome,
+        conhecimento_id: novoVinculo.conhecimento_id || '',
+        conhecimento_nome: conhecimento.nome,
+        status: novoVinculo.status || 'EM_DESENVOLVIMENTO',
+        data_inicio: novoVinculo.data_inicio,
+        data_alvo: novoVinculo.data_alvo,
+        data_obtencao: novoVinculo.data_obtencao,
+        progresso: novoVinculo.progresso || 0,
+        observacoes: novoVinculo.observacoes || ''
+      }
+      setVinculos([...vinculos, vinculo])
     }
-    return badges[status]
+
+    setShowModal(false)
+    setEditando(null)
+    setNovoVinculo({
+      colaborador_id: '',
+      conhecimento_id: '',
+      status: 'EM_DESENVOLVIMENTO',
+      progresso: 0,
+      observacoes: ''
+    })
   }
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('pt-BR')
+  const handleEditar = (vinculo: Vinculo) => {
+    setEditando(vinculo)
+    setNovoVinculo(vinculo)
+    setShowModal(true)
+  }
+
+  const handleExcluir = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este vínculo?')) {
+      setVinculos(vinculos.filter(v => v.id !== id))
+    }
+  }
+
+  const getStatusConfig = (status: string) => {
+    return statusOptions.find(s => s.value === status) || statusOptions[0]
+  }
+
+  const updateProgresso = (id: string, progresso: number) => {
+    setVinculos(vinculos.map(v =>
+      v.id === id
+        ? {
+            ...v,
+            progresso,
+            status: progresso === 100 ? 'OBTIDO' : progresso > 0 ? 'EM_DESENVOLVIMENTO' : 'PLANEJADO'
+          }
+        : v
+    ))
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <LinkIcon className="w-8 h-8 text-blue-600" />
-              Vínculos de Conhecimento
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Gestão de certificações e conhecimentos dos colaboradores
-            </p>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Vínculos Colaborador-Conhecimento</h1>
+              <p className="text-gray-600 mt-2">Gerencie o desenvolvimento de conhecimentos dos colaboradores</p>
+            </div>
+            <button
+              onClick={() => {
+                setEditando(null)
+                setNovoVinculo({
+                  colaborador_id: '',
+                  conhecimento_id: '',
+                  status: 'EM_DESENVOLVIMENTO',
+                  progresso: 0,
+                  observacoes: ''
+                })
+                setShowModal(true)
+              }}
+              className="flex items-center gap-2 bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Novo Vínculo
+            </button>
           </div>
 
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-semibold">
-            <Plus className="w-5 h-5" />
-            Novo Vínculo
-          </button>
-        </div>
-      </div>
-
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Válidos</p>
-          <p className="text-3xl font-bold text-green-600">{stats.validos}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Expirando</p>
-          <p className="text-3xl font-bold text-yellow-600">{stats.expirando}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Vencidos</p>
-          <p className="text-3xl font-bold text-red-600">{stats.vencidos}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Em Andamento</p>
-          <p className="text-3xl font-bold text-blue-600">{stats.em_andamento}</p>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Busca */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Buscar por colaborador ou conhecimento..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
+          {/* Estatísticas */}
+          <div className="grid grid-cols-4 gap-4 mt-6">
+            {statusOptions.map(status => {
+              const count = vinculos.filter(v => v.status === status.value).length
+              return (
+                <div key={status.value} className="bg-gray-50 rounded-lg p-4">
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${status.color}`}>
+                    {status.label}
+                  </span>
+                  <p className="text-2xl font-bold mt-2">{count}</p>
+                </div>
+              )
+            })}
           </div>
+        </div>
 
-          {/* Filtro de Status */}
-          <div className="flex gap-2">
-            {(['all', 'valido', 'expirando', 'vencido', 'em_andamento'] as const).map(status => (
+        {/* Lista de Vínculos */}
+        <div className="space-y-4">
+          {vinculos.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <LinkIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum vínculo cadastrado</h3>
+              <p className="text-gray-500 mb-6">Comece vinculando colaboradores aos conhecimentos que precisam desenvolver</p>
               <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  statusFilter === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
+                onClick={() => setShowModal(true)}
+                className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
               >
-                {status === 'all' ? 'Todos' :
-                 status === 'valido' ? 'Válidos' :
-                 status === 'expirando' ? 'Expirando' :
-                 status === 'vencido' ? 'Vencidos' : 'Em Andamento'}
+                Criar Primeiro Vínculo
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            vinculos.map(vinculo => {
+              const statusConfig = getStatusConfig(vinculo.status)
+              return (
+                <div key={vinculo.id} className="bg-white rounded-lg shadow-md p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="bg-teal-100 rounded-full p-3">
+                        <Users className="w-6 h-6 text-teal-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{vinculo.colaborador_nome}</h3>
+                          <span className="text-gray-400">→</span>
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-gray-600" />
+                            <span className="text-gray-700 font-medium">{vinculo.conhecimento_nome}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          {vinculo.data_inicio && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              Início: {new Date(vinculo.data_inicio).toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
+                          {vinculo.data_alvo && (
+                            <span className="flex items-center gap-1">
+                              <Target className="w-4 h-4" />
+                              Meta: {new Date(vinculo.data_alvo).toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
+                          {vinculo.data_obtencao && (
+                            <span className="text-green-600 font-medium">
+                              ✓ Obtido em {new Date(vinculo.data_obtencao).toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
+                        {statusConfig.label}
+                      </span>
+                      <button
+                        onClick={() => handleEditar(vinculo)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleExcluir(vinculo.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Barra de Progresso */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Progresso</span>
+                      <span className="font-semibold">{vinculo.progresso}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${vinculo.progresso}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Controle de Progresso */}
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={vinculo.progresso}
+                      onChange={(e) => updateProgresso(vinculo.id, parseInt(e.target.value))}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={vinculo.progresso}
+                      onChange={(e) => updateProgresso(vinculo.id, parseInt(e.target.value))}
+                      className="w-16 px-2 py-1 border rounded text-center"
+                    />
+                  </div>
+
+                  {vinculo.observacoes && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-sm text-gray-700"><strong>Observações:</strong> {vinculo.observacoes}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
 
-      {/* Tabela de Vínculos */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4">Carregando vínculos...</p>
-        </div>
-      ) : filteredLinks.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
-          <LinkIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Nenhum vínculo encontrado
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Tente ajustar os filtros ou adicione um novo vínculo
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Colaborador
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Conhecimento
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Progresso
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Datas
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredLinks.map(link => {
-                  const statusBadge = getStatusBadge(link.status)
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              {editando ? 'Editar Vínculo' : 'Novo Vínculo'}
+            </h2>
 
-                  return (
-                    <tr key={link.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {link.employee_name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {link.employee_cargo}
-                          </div>
-                        </div>
-                      </td>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-1" />
+                    Colaborador *
+                  </label>
+                  <select
+                    value={novoVinculo.colaborador_id}
+                    onChange={(e) => setNovoVinculo({...novoVinculo, colaborador_id: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Selecione um colaborador</option>
+                    {colaboradores.map(colab => (
+                      <option key={colab.id} value={colab.id}>
+                        {colab.nome} - {colab.cargo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {link.knowledge_name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {link.knowledge_type} • {link.knowledge_vendor}
-                          </div>
-                        </div>
-                      </td>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <BookOpen className="w-4 h-4 inline mr-1" />
+                    Conhecimento *
+                  </label>
+                  <select
+                    value={novoVinculo.conhecimento_id}
+                    onChange={(e) => setNovoVinculo({...novoVinculo, conhecimento_id: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Selecione um conhecimento</option>
+                    {conhecimentos.map(conhec => (
+                      <option key={conhec.id} value={conhec.id}>
+                        {conhec.nome} ({conhec.tipo})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
-                          {statusBadge.icon}
-                          {statusBadge.label}
-                        </span>
-                        {link.dias_restantes !== undefined && link.dias_restantes > 0 && link.dias_restantes < 60 && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {link.dias_restantes} dias restantes
-                          </div>
-                        )}
-                      </td>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  value={novoVinculo.status}
+                  onChange={(e) => setNovoVinculo({...novoVinculo, status: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                >
+                  {statusOptions.map(status => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
+                </select>
+              </div>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${link.progresso}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {link.progresso}%
-                        </span>
-                      </td>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
+                  <input
+                    type="date"
+                    value={novoVinculo.data_inicio || ''}
+                    onChange={(e) => setNovoVinculo({...novoVinculo, data_inicio: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
 
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {link.data_obtencao && (
-                          <div>Obtido: {formatDate(link.data_obtencao)}</div>
-                        )}
-                        {link.data_validade && (
-                          <div>Validade: {formatDate(link.data_validade)}</div>
-                        )}
-                        {link.data_inicio && !link.data_obtencao && (
-                          <div>Início: {formatDate(link.data_inicio)}</div>
-                        )}
-                      </td>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Meta</label>
+                  <input
+                    type="date"
+                    value={novoVinculo.data_alvo || ''}
+                    onChange={(e) => setNovoVinculo({...novoVinculo, data_alvo: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-2">
-                          <button className="text-blue-600 hover:text-blue-900">
-                            Ver
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900">
-                            Editar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Obtenção</label>
+                  <input
+                    type="date"
+                    value={novoVinculo.data_obtencao || ''}
+                    onChange={(e) => setNovoVinculo({...novoVinculo, data_obtencao: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Progresso: {novoVinculo.progresso}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={novoVinculo.progresso || 0}
+                  onChange={(e) => setNovoVinculo({...novoVinculo, progresso: parseInt(e.target.value)})}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  value={novoVinculo.observacoes}
+                  onChange={(e) => setNovoVinculo({...novoVinculo, observacoes: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  rows={3}
+                  placeholder="Anotações sobre o desenvolvimento..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowModal(false)
+                  setEditando(null)
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSalvar}
+                disabled={!novoVinculo.colaborador_id || !novoVinculo.conhecimento_id}
+                className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {editando ? 'Salvar Alterações' : 'Criar Vínculo'}
+              </button>
+            </div>
           </div>
         </div>
       )}

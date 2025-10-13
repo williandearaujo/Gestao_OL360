@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/alerts", tags=["Alertas"])
 
-
 class AlertType(str, Enum):
     CERTIFICATION_EXPIRING = "certification_expiring"
     CERTIFICATION_EXPIRED = "certification_expired"
@@ -22,7 +21,6 @@ class AlertType(str, Enum):
     DOCUMENT_MISSING = "document_missing"
     SYSTEM = "system"
 
-
 class AlertPriority(str, Enum):
     CRITICAL = "critical"
     HIGH = "high"
@@ -30,15 +28,14 @@ class AlertPriority(str, Enum):
     LOW = "low"
     INFO = "info"
 
-
 @router.get("/")
 async def get_alerts(
-        alert_type: Optional[AlertType] = None,
-        priority: Optional[AlertPriority] = None,
-        is_read: Optional[bool] = None,
-        employee_id: Optional[int] = None,
-        limit: int = Query(default=50, le=200),
-        offset: int = 0
+    alert_type: Optional[AlertType] = None,
+    priority: Optional[AlertPriority] = None,
+    is_read: Optional[bool] = None,
+    employee_id: Optional[int] = None,
+    limit: int = Query(default=50, le=200),
+    offset: int = 0
 ):
     """
     Listar todos os alertas com filtros
@@ -152,7 +149,7 @@ async def get_alerts(
 
         # Paginação
         total = len(filtered_alerts)
-        paginated_alerts = filtered_alerts[offset:offset + limit]
+        paginated_alerts = filtered_alerts[offset:offset+limit]
 
         return {
             "success": True,
@@ -166,7 +163,6 @@ async def get_alerts(
     except Exception as e:
         logger.error(f"❌ Erro ao buscar alertas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/summary")
 async def get_alerts_summary():
@@ -204,7 +200,6 @@ async def get_alerts_summary():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/{alert_id}")
 async def get_alert(alert_id: int):
     """
@@ -231,7 +226,6 @@ async def get_alert(alert_id: int):
     except Exception as e:
         raise HTTPException(status_code=404, detail="Alerta não encontrado")
 
-
 @router.patch("/{alert_id}/read")
 async def mark_alert_as_read(alert_id: int):
     """
@@ -248,11 +242,10 @@ async def mark_alert_as_read(alert_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.patch("/read-all")
 async def mark_all_as_read(
-        alert_type: Optional[AlertType] = None,
-        employee_id: Optional[int] = None
+    alert_type: Optional[AlertType] = None,
+    employee_id: Optional[int] = None
 ):
     """
     Marcar múltiplos alertas como lidos
@@ -269,7 +262,6 @@ async def mark_all_as_read(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.delete("/{alert_id}")
 async def delete_alert(alert_id: int):
     """
@@ -285,7 +277,6 @@ async def delete_alert(alert_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/")
 async def create_alert(alert_data: Dict[str, Any]):
@@ -324,12 +315,11 @@ async def create_alert(alert_data: Dict[str, Any]):
         logger.error(f"❌ Erro ao criar alerta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/employee/{employee_id}")
 async def get_employee_alerts(
-        employee_id: int,
-        is_read: Optional[bool] = None,
-        limit: int = 20
+    employee_id: int,
+    is_read: Optional[bool] = None,
+    limit: int = 20
 ):
     """
     Obter alertas específicos de um colaborador
