@@ -1,5 +1,24 @@
-"""Models package"""
-from app.models.user import User, UserRole
-from app.models.employee import Employee, EmployeeStatus, MaritalStatus
+"""
+Inicialização de Models - COMPLETO
+Gestão 360 - OL Tecnologia
+"""
+from app.models.base import Base
+from app.models.user import User
+from app.models.area import Area
+from app.models.team import Team
+from app.models.manager import Manager
+from app.models.employee import Employee
+from app.models.knowledge import Knowledge
+from app.models.employee_knowledge import EmployeeKnowledge
 
-__all__ = ['User', 'UserRole', 'Employee', 'EmployeeStatus', 'MaritalStatus']
+# Exportar todos os models
+__all__ = [
+    "Base",
+    "User",
+    "Area",
+    "Team",
+    "Manager",
+    "Employee",
+    "Knowledge",
+    "EmployeeKnowledge",
+]

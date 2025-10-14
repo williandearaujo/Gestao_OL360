@@ -1,0 +1,6 @@
+Usuário                 |  Senha          |  Hash bcrypt
+------------------------+-----------------+--------------------------------------------------------------
+admin@ol360.com         |  Admin@123456   |  $2b$12$KZ2BDOBbnbQi/jheV7Y4VuXDsZIkzHJs2d9RFb4vSJZa.Z4NFnNqW
+diretoria@ol360.com     |  Diretoria@123  |  $2b$12$pqqPrLrxntLL64yQy7POYOjO12xsEfzHokeX5r4fLnKoWgoqhdVqi
+gerente1@ol360.com      |  Gerente@123    |  $2b$12$c4IEEi10BXM0Rcx0aWJeAOFO1xEjYPwTf1OPzyqw9c53RvrqFlWpu
+colaborador1@ol360.com  |  Colab@123      |  $2b$12$T.wEL6EmvtOAGxMHylJ8HOWZmkPkBVVZ3TxzpPQVOqqlnoaZ2YOBW

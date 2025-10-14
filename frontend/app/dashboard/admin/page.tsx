@@ -5,7 +5,7 @@ import { Users, Shield, Settings, Database, Bell, Mail, Lock, Trash2, Edit, Plus
 
 interface Usuario {
   id: string
-  nome: string
+  nome_completo: string
   email: string
   role: string
   ativo: boolean

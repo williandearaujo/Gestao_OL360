@@ -1,57 +1,45 @@
+# ===========================================================================
+# Arquivo: backend/app/routers/teams.py
+# ===========================================================================
 """
-Router de Teams
+Router de Times/Equipes
 """
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import logging
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
 
-logger = logging.getLogger(__name__)
+from app.database import get_db
+from app.models.user import User
+from app.models.team import Team
+from app.core.security import get_current_user
+from app.schemas.organization import TeamCreate, TeamResponse
 
 router = APIRouter(prefix="/teams", tags=["Times"])
 
 
-@router.get("/")
-async def list_teams():
-    """Listar todos os times"""
-    try:
-        teams = [
-            {"id": 1, "nome": "Time Dev", "area_id": 1, "manager_id": 1},
-            {"id": 2, "nome": "Time Comercial", "area_id": 2, "manager_id": 2}
-        ]
-
-        return {
-            "success": True,
-            "data": teams,
-            "total": len(teams)
-        }
-    except Exception as e:
-        logger.error(f"Erro ao listar times: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/", response_model=List[TeamResponse])
+async def list_teams(
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Lista todos os times"""
+    teams = db.query(Team).filter(Team.ativa == True).all()
+    return teams
 
 
-@router.get("/{team_id}")
-async def get_team(team_id: int):
-    """Obter detalhes de um time"""
-    try:
-        team = {"id": team_id, "nome": "Time Dev", "area_id": 1}
-        return {"success": True, "data": team}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Time não encontrado")
+@router.post("/", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
+async def create_team(
+        team_data: TeamCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Cria um novo time"""
+    if current_user.role not in ["ADMIN", "DIRETORIA", "GERENTE"]:
+        raise HTTPException(status_code=403, detail="Sem permissão")
 
+    team = Team(**team_data.model_dump())
+    db.add(team)
+    db.commit()
+    db.refresh(team)
 
-@router.post("/")
-async def create_team(data: Dict[str, Any]):
-    """Criar novo time"""
-    return {"success": True, "message": "Time criado com sucesso", "data": data}
-
-
-@router.put("/{team_id}")
-async def update_team(team_id: int, data: Dict[str, Any]):
-    """Atualizar time"""
-    return {"success": True, "message": "Time atualizado com sucesso"}
-
-
-@router.delete("/{team_id}")
-async def delete_team(team_id: int):
-    """Deletar time"""
-    return {"success": True, "message": "Time deletado com sucesso"}
+    return team

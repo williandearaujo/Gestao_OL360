@@ -1,90 +1,90 @@
 """
-Routers do projeto Gestão 360 - IMPORTS SEGUROS E COMPLETOS
-Inclui TODOS os routers necessários
+Routers - Gestão 360
 """
 import logging
+from fastapi import APIRouter
 
 logger = logging.getLogger(__name__)
 
-# Imports com fallbacks seguros
+# Auth
 try:
     from .auth import router as auth
-    logger.info("✅ Auth router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar auth: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Auth")
+except ImportError:
     auth = APIRouter(prefix="/auth", tags=["Auth"])
 
-try:
-    from .areas import router as areas
-    logger.info("✅ Areas router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar areas: {e}")
-    from fastapi import APIRouter
-    areas = APIRouter(prefix="/areas", tags=["Areas"])
-
-try:
-    from .teams import router as teams
-    logger.info("✅ Teams router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar teams: {e}")
-    from fastapi import APIRouter
-    teams = APIRouter(prefix="/teams", tags=["Teams"])
-
-try:
-    from .employee_knowledge import router as employee_knowledge
-    logger.info("✅ Employee Knowledge router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar employee_knowledge: {e}")
-    from fastapi import APIRouter
-    employee_knowledge = APIRouter(prefix="/employee-knowledge", tags=["Vínculos"])
-
+# Admin
 try:
     from .admin import router as admin
-    logger.info("✅ Admin router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar admin: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Admin")
+except ImportError:
     admin = APIRouter(prefix="/admin", tags=["Admin"])
 
+# Employees
 try:
     from .employees import router as employees
-    logger.info("✅ Employees router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar employees: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Employees")
+except ImportError:
     employees = APIRouter(prefix="/employees", tags=["Colaboradores"])
 
+# Areas
+try:
+    from .areas import router as areas
+    logger.info("✅ Areas")
+except ImportError:
+    areas = APIRouter(prefix="/areas", tags=["Áreas"])
+
+# Teams
+try:
+    from .teams import router as teams
+    logger.info("✅ Teams")
+except ImportError:
+    teams = APIRouter(prefix="/teams", tags=["Times"])
+
+# Managers
 try:
     from .managers import router as managers
-    logger.info("✅ Managers router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar managers: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Managers")
+except ImportError:
     managers = APIRouter(prefix="/managers", tags=["Gestores"])
 
+# Knowledge
 try:
     from .knowledge import router as knowledge
-    logger.info("✅ Knowledge router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar knowledge: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Knowledge")
+except ImportError:
     knowledge = APIRouter(prefix="/knowledge", tags=["Conhecimentos"])
 
-# ✅ NOVO: Alertas router
+# Employee Knowledge
+try:
+    from .employee_knowledge import router as employee_knowledge
+    logger.info("✅ Employee Knowledge")
+except ImportError:
+    employee_knowledge = APIRouter(prefix="/employee-knowledge", tags=["Vínculos"])
+
+# Alerts
 try:
     from .alerts import router as alerts
-    logger.info("✅ Alerts router importado")
-except ImportError as e:
-    logger.error(f"❌ Erro ao importar alerts: {e}")
-    from fastapi import APIRouter
+    logger.info("✅ Alerts")
+except ImportError:
     alerts = APIRouter(prefix="/alerts", tags=["Alertas"])
 
-# Export clean
-__all__ = [
-    "auth", "admin", "employees", "areas",
-    "teams", "managers", "knowledge", "employee_knowledge",
-    "alerts"  # ✅ NOVO
-]
+# PDI Records
+try:
+    from .pdi_records import router as pdi_records
+    logger.info("✅ PDI")
+except ImportError:
+    pdi_records = APIRouter(prefix="/pdi", tags=["PDI"])
 
-logger.info(f"🎉 Total de routers carregados: {len(__all__)}")
+# One to One
+try:
+    from .one_to_one_records import router as one_to_one_records
+    logger.info("✅ One-to-One")
+except ImportError:
+    one_to_one_records = APIRouter(prefix="/one-to-one", tags=["1:1"])
+
+__all__ = [
+    "auth", "admin", "employees", "areas", "teams",
+    "managers", "knowledge", "employee_knowledge",
+    "alerts", "pdi_records", "one_to_one_records"
+]

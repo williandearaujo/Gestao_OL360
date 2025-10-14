@@ -37,13 +37,10 @@ async def get_alerts(
     limit: int = Query(default=50, le=200),
     offset: int = 0
 ):
-    """
-    Listar todos os alertas com filtros
-    """
+    """Listar todos os alertas com filtros"""
     try:
         logger.info(f"📬 Buscando alertas (type={alert_type}, priority={priority})")
 
-        # Mock de alertas - você vai conectar ao banco depois
         alerts = [
             {
                 "id": 1,
@@ -53,7 +50,7 @@ async def get_alerts(
                 "message": "A certificação AWS Solutions Architect do colaborador João Silva vence em 7 dias",
                 "employee_id": 1,
                 "employee_name": "João Silva",
-                "related_id": 10,  # ID da certificação
+                "related_id": 10,
                 "related_type": "certification",
                 "is_read": False,
                 "created_at": datetime.now().isoformat(),
@@ -132,7 +129,6 @@ async def get_alerts(
             }
         ]
 
-        # Aplicar filtros
         filtered_alerts = alerts
 
         if alert_type:
@@ -147,7 +143,6 @@ async def get_alerts(
         if employee_id:
             filtered_alerts = [a for a in filtered_alerts if a.get('employee_id') == employee_id]
 
-        # Paginação
         total = len(filtered_alerts)
         paginated_alerts = filtered_alerts[offset:offset+limit]
 
@@ -166,9 +161,7 @@ async def get_alerts(
 
 @router.get("/summary")
 async def get_alerts_summary():
-    """
-    Obter resumo de alertas por tipo e prioridade
-    """
+    """Obter resumo de alertas por tipo e prioridade"""
     try:
         summary = {
             "total": 15,
@@ -202,11 +195,8 @@ async def get_alerts_summary():
 
 @router.get("/{alert_id}")
 async def get_alert(alert_id: int):
-    """
-    Obter detalhes de um alerta específico
-    """
+    """Obter detalhes de um alerta específico"""
     try:
-        # Mock - você vai buscar do banco
         alert = {
             "id": alert_id,
             "type": "certification_expiring",
@@ -228,9 +218,7 @@ async def get_alert(alert_id: int):
 
 @router.patch("/{alert_id}/read")
 async def mark_alert_as_read(alert_id: int):
-    """
-    Marcar alerta como lido
-    """
+    """Marcar alerta como lido"""
     try:
         logger.info(f"✅ Marcando alerta {alert_id} como lido")
 
@@ -247,9 +235,7 @@ async def mark_all_as_read(
     alert_type: Optional[AlertType] = None,
     employee_id: Optional[int] = None
 ):
-    """
-    Marcar múltiplos alertas como lidos
-    """
+    """Marcar múltiplos alertas como lidos"""
     try:
         logger.info("✅ Marcando múltiplos alertas como lidos")
 
@@ -264,9 +250,7 @@ async def mark_all_as_read(
 
 @router.delete("/{alert_id}")
 async def delete_alert(alert_id: int):
-    """
-    Deletar um alerta
-    """
+    """Deletar um alerta"""
     try:
         logger.info(f"🗑️ Deletando alerta {alert_id}")
 
@@ -280,13 +264,10 @@ async def delete_alert(alert_id: int):
 
 @router.post("/")
 async def create_alert(alert_data: Dict[str, Any]):
-    """
-    Criar novo alerta (uso interno do sistema)
-    """
+    """Criar novo alerta (uso interno do sistema)"""
     try:
         logger.info(f"➕ Criando novo alerta: {alert_data.get('title')}")
 
-        # Validar dados necessários
         required_fields = ['type', 'priority', 'title', 'message']
         for field in required_fields:
             if field not in alert_data:
@@ -295,9 +276,8 @@ async def create_alert(alert_data: Dict[str, Any]):
                     detail=f"Campo obrigatório ausente: {field}"
                 )
 
-        # Aqui você vai salvar no banco
         new_alert = {
-            "id": 999,  # Será gerado pelo banco
+            "id": 999,
             **alert_data,
             "is_read": False,
             "created_at": datetime.now().isoformat()
@@ -321,11 +301,8 @@ async def get_employee_alerts(
     is_read: Optional[bool] = None,
     limit: int = 20
 ):
-    """
-    Obter alertas específicos de um colaborador
-    """
+    """Obter alertas específicos de um colaborador"""
     try:
-        # Usar a função principal com filtro de employee_id
         return await get_alerts(
             employee_id=employee_id,
             is_read=is_read,

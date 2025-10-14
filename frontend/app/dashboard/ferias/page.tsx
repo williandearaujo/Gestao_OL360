@@ -36,7 +36,7 @@ export default function FeriasPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
-      const response = await fetch(`${API_URL}/api/employees`, {
+      const response = await fetch(`${API_URL}/employees`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

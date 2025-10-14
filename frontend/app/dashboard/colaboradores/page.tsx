@@ -1,105 +1,107 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Users, CheckCircle, Search, Plus, Clock, Award, Link as LinkIcon } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from "react";
+import {
+  Users,
+  CheckCircle,
+  Search,
+  Plus,
+  Clock,
+  Award,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { getColaboradores } from "@/lib/api";
 
 interface Colaborador {
-  id: number
-  nome_completo: string
-  email: string
-  cargo: string
-  departamento?: string
-  area?: string
-  status: string
-  data_admissao: string
-  team_id?: number
-  manager_id?: number
+  id: number;
+  nome_completo: string;
+  email: string;
+  cargo: string;
+  departamento?: string;
+  area?: string;
+  status: string;
+  data_admissao: string;
+  team_id?: number;
+  manager_id?: number;
 }
 
 export default function ColaboradoresPage() {
-  const router = useRouter()
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const router = useRouter();
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTab, setSelectedTab] = useState("todos");
+
+  const tabs = [
+    { key: "todos", label: "Todos" },
+    { key: "ativos", label: "Ativos" },
+    { key: "ferias", label: "Férias" },
+    { key: "afastados", label: "Afastados" },
+  ];
 
   useEffect(() => {
-    loadColaboradores()
-  }, [])
+    loadColaboradores();
+  }, []);
 
   const loadColaboradores = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true)
-      setError(null)
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const token = localStorage.getItem('token')
-
-      const response = await fetch(`${API_URL}/api/employees`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      // A API pode retornar { data: [...] } ou diretamente [...]
-      const colaboradoresData = data.data || data
-
-      console.log('✅ Colaboradores carregados:', colaboradoresData)
-      setColaboradores(Array.isArray(colaboradoresData) ? colaboradoresData : [])
-
+      const data = await getColaboradores();
+      console.log("✅ Colaboradores carregados:", data);
+      setColaboradores(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error('❌ Erro ao carregar colaboradores:', err)
-      setError(err.message || 'Erro ao carregar colaboradores')
+      console.error("❌ Erro ao carregar colaboradores:", err);
+      setError(err.message || "Erro ao carregar colaboradores");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este colaborador?')) return
+  const filteredByTab = colaboradores.filter((col) => {
+    if (selectedTab === "todos") return true;
+    return col.status.toLowerCase() === selectedTab;
+  });
 
-    try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const token = localStorage.getItem('token')
-
-      const response = await fetch(`${API_URL}/api/employees/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Erro ao excluir colaborador')
-      }
-
-      alert('Colaborador excluído com sucesso!')
-      loadColaboradores()
-    } catch (err: any) {
-      alert(err.message)
-    }
-  }
-
-  const filteredColaboradores = colaboradores.filter(col =>
-    col.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    col.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    col.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredColaboradores = filteredByTab.filter(
+    (col) =>
+      col.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      col.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      col.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const stats = {
     total: colaboradores.length,
-    ativos: colaboradores.filter(c => c.status === 'ativo').length,
-    ferias: colaboradores.filter(c => c.status === 'ferias').length,
-    afastados: colaboradores.filter(c => c.status === 'afastado').length
-  }
+    ativos: colaboradores.filter((c) => c.status.toLowerCase() === "ativo").length,
+    ferias: colaboradores.filter((c) => c.status.toLowerCase() === "ferias").length,
+    afastados: colaboradores.filter((c) => c.status.toLowerCase() === "afastado").length,
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Tem certeza que deseja excluir este colaborador?")) return;
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${API_URL}/employees/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir colaborador");
+      }
+
+      alert("Colaborador excluído com sucesso!");
+      loadColaboradores();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -109,7 +111,7 @@ export default function ColaboradoresPage() {
           <p className="text-gray-600 dark:text-gray-400">Carregando colaboradores...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -129,7 +131,7 @@ export default function ColaboradoresPage() {
                 Tentar Novamente
               </button>
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
               >
                 Voltar ao Dashboard
@@ -138,7 +140,7 @@ export default function ColaboradoresPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -157,7 +159,7 @@ export default function ColaboradoresPage() {
           </div>
 
           <button
-            onClick={() => router.push('/dashboard/colaboradores/novo')}
+            onClick={() => router.push("/dashboard/colaboradores/novo")}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-semibold"
           >
             <Plus className="w-5 h-5" />
@@ -209,6 +211,23 @@ export default function ColaboradoresPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b mb-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setSelectedTab(tab.key)}
+            className={`px-4 py-2 font-medium ${
+              selectedTab === tab.key
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-500"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
         <div className="relative">
@@ -232,7 +251,7 @@ export default function ColaboradoresPage() {
               Nenhum colaborador encontrado
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              {searchTerm ? 'Tente outro termo de busca' : 'Adicione o primeiro colaborador'}
+              {searchTerm ? "Tente outro termo de busca" : "Adicione o primeiro colaborador"}
             </p>
           </div>
         ) : (
@@ -276,17 +295,22 @@ export default function ColaboradoresPage() {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {col.departamento || col.area || 'N/A'}
+                      {col.departamento || col.area || "N/A"}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                        col.status === 'ativo' ? 'bg-green-100 text-green-800' :
-                        col.status === 'ferias' ? 'bg-orange-100 text-orange-800' :
-                        col.status === 'afastado' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {col.status?.toUpperCase() || 'INATIVO'}
+                      <span
+                        className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                          col.status === "ativo"
+                            ? "bg-green-100 text-green-800"
+                            : col.status === "ferias"
+                            ? "bg-orange-100 text-orange-800"
+                            : col.status === "afastado"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {col.status?.toUpperCase() || "INATIVO"}
                       </span>
                     </td>
 
@@ -320,5 +344,5 @@ export default function ColaboradoresPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

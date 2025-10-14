@@ -48,7 +48,7 @@ export default function AlertasPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
-      let url = `${API_URL}/api/alerts?`
+      let url = `${API_URL}/alerts?`
       if (filter === 'unread') url += 'is_read=false&'
       if (priorityFilter !== 'all') url += `priority=${priorityFilter}&`
 
@@ -82,7 +82,7 @@ export default function AlertasPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
-      const response = await fetch(`${API_URL}/api/alerts/${alertId}/read`, {
+      const response = await fetch(`${API_URL}/alerts/${alertId}/read`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -105,7 +105,7 @@ export default function AlertasPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
-      const response = await fetch(`${API_URL}/api/alerts/${alertId}`, {
+      const response = await fetch(`${API_URL}/alerts/${alertId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -125,7 +125,7 @@ export default function AlertasPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
-      const response = await fetch(`${API_URL}/api/alerts/read-all`, {
+      const response = await fetch(`${API_URL}/alerts/read-all`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

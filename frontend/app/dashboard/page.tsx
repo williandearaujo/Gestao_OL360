@@ -1,202 +1,341 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { BookOpen, BarChart3, Users, Star, MessageCircle } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import Link from 'next/link'
+import React, { useState, useEffect } from 'react'
+import {
+  Users, BookOpen, Award, TrendingUp, AlertCircle,
+  Calendar, Clock, CheckCircle, XCircle
+} from 'lucide-react'
 
-const StatCard = ({
-  name,
-  value,
-  icon,
-  color,
-  className = '',
-  onClick,
-}: {
-  name: string
-  value: string | number
+interface DashboardStats {
+  colaboradores: {
+    total: number
+    ativos: number
+    ferias: number
+    afastados: number
+  }
+  conhecimentos: {
+    total: number
+    ativos: number
+    certificacoes: number
+    cursos: number
+  }
+  alertas: {
+    total: number
+    criticos: number
+    avisos: number
+  }
+  pdi: {
+    total: number
+    concluidos: number
+    emAndamento: number
+    atrasados: number
+  }
+}
+
+interface StatCardProps {
+  title: string
+  value: number
+  subtitle?: string
   icon: React.ReactNode
   color: string
-  className?: string
-  onClick?: () => void
+  trend?: string
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  title, value, subtitle, icon, color, trend
 }) => (
-  <div
-    role={onClick ? 'button' : undefined}
-    tabIndex={onClick ? 0 : undefined}
-    onClick={onClick}
-    onKeyDown={e => {
-      if (onClick && (e.key === 'Enter' || e.key === ' ')) {
-        onClick()
-      }
-    }}
-    className={`bg-ol-white dark:bg-darkOl-grayLight rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow border-l-4 cursor-pointer ${className}`}
-    style={{ borderColor: color }}
-  >
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium mb-1">{name}</p>
-        <p className="text-3xl font-bold text-ol-black dark:text-darkOl-white">{value}</p>
+  <div className={`bg-white rounded-xl shadow-md p-6 border-l-4 ${color} hover:shadow-lg transition-shadow`}>
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+        <p className="text-3xl font-bold text-gray-900">{value}</p>
+        {subtitle && (
+          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        )}
+        {trend && (
+          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" />
+            {trend}
+          </p>
+        )}
       </div>
-      <div className="text-4xl text-ol-grayMedium">{icon}</div>
+      <div className={`p-3 rounded-lg ${color.replace('border-', 'bg-').replace('600', '100')}`}>
+        {icon}
+      </div>
     </div>
   </div>
 )
 
-const AlertCard = ({ alerts }: { alerts: { message: string }[] }) => (
-  <div className="bg-ol-white dark:bg-darkOl-grayLight rounded-xl shadow-lg p-6 border border-ol-grayMedium">
-    <h3 className="text-xl font-semibold text-ol-black mb-5">Alertas do Sistema</h3>
-    {alerts.length ? (
-      alerts.map((alert, idx) => (
-        <div key={idx} className="mb-3 p-3 border border-yellow-300 bg-yellow-50 rounded">{alert.message}</div>
-      ))
-    ) : (
-      <div className="text-center text-green-600">Sistema está funcionando normalmente</div>
-    )}
+interface ActivityItem {
+  id: string
+  type: 'pdi' | 'certificacao' | 'ferias' | '1x1'
+  employee: string
+  description: string
+  time: string
+  status: 'pending' | 'completed' | 'warning'
+}
+
+const ActivityFeed: React.FC<{ activities: ActivityItem[] }> = ({ activities }) => (
+  <div className="bg-white rounded-xl shadow-md p-6">
+    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <Clock className="w-5 h-5 text-blue-600" />
+      Atividades Recentes
+    </h3>
+    <div className="space-y-3 max-h-96 overflow-y-auto">
+      {activities.map((activity) => (
+        <div
+          key={activity.id}
+          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+        >
+          <div className={`p-2 rounded-full ${
+            activity.status === 'completed' ? 'bg-green-100' :
+            activity.status === 'warning' ? 'bg-yellow-100' :
+            'bg-blue-100'
+          }`}>
+            {activity.status === 'completed' ? (
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            ) : activity.status === 'warning' ? (
+              <AlertCircle className="w-4 h-4 text-yellow-600" />
+            ) : (
+              <Clock className="w-4 h-4 text-blue-600" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900">{activity.employee}</p>
+            <p className="text-sm text-gray-600">{activity.description}</p>
+            <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
 )
 
-const recentActivities = [
-  { action: 'Nova avaliação criada', user: 'João Silva', time: 'Há 2 horas' },
-  { action: 'PDI atualizado', user: 'Maria Santos', time: 'Há 3 horas' },
-  { action: 'One-to-One realizado', user: 'Pedro Costa', time: 'Há 5 horas' },
-  { action: 'Colaborador adicionado', user: 'Ana Lima', time: 'Há 1 dia' },
-]
-
-const alerts = [
-  { message: 'Atenção: Avaliação performance em aberto!' },
-  { message: 'Novo colaborador sem vínculo cadastrado.' },
-]
-
 export default function DashboardPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const [colaboradorCount, setColaboradorCount] = useState<number>(0)
-  const [loadingColaboradores, setLoadingColaboradores] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    colaboradores: { total: 0, ativos: 0, ferias: 0, afastados: 0 },
+    conhecimentos: { total: 0, ativos: 0, certificacoes: 0, cursos: 0 },
+    alertas: { total: 0, criticos: 0, avisos: 0 },
+    pdi: { total: 0, concluidos: 0, emAndamento: 0, atrasados: 0 }
+  })
+
+  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchColaboradorCount() {
-      try {
-        setLoadingColaboradores(true)
-        setError(null)
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const token = localStorage.getItem('token')
-        const response = await fetch(`${API_URL}/api/employees`, {
-          headers: {
-            Authorization: `Bearer ${token ?? ''}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        if (!response.ok) throw new Error(`Erro ${response.status}: ${response.statusText}`)
-        const data = await response.json()
-        const colaboradores = Array.isArray(data) ? data : data.data
-        setColaboradorCount(colaboradores.length)
-      } catch (e: any) {
-        setError(e.message)
-      } finally {
-        setLoadingColaboradores(false)
-      }
-    }
-    fetchColaboradorCount()
+    loadDashboardData()
   }, [])
 
-  const stats = useMemo(() => [
-    {
-      name: 'Total de Colaboradores',
-      value: loadingColaboradores ? 'Carregando...' : colaboradorCount,
-      icon: <Users />,
-      color: '#3b82f6',
-      onClick: () => router.push('/dashboard/colaboradores'),
-    },
-    { name: 'PDIs Ativos', value: 60, icon: <BarChart3 />, color: '#22c55e' },
-    { name: 'One-to-Ones Agendados', value: 45, icon: <MessageCircle />, color: '#a855f7' },
-    { name: 'Avaliações Pendentes', value: 20, icon: <Star />, color: '#eab308' },
-  ], [colaboradorCount, loadingColaboradores, router])
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+
+      // TODO: Substituir por chamadas reais à API
+      // Dados mockados por enquanto
+      setStats({
+        colaboradores: { total: 42, ativos: 38, ferias: 2, afastados: 2 },
+        conhecimentos: { total: 156, ativos: 143, certificacoes: 45, cursos: 98 },
+        alertas: { total: 12, criticos: 3, avisos: 9 },
+        pdi: { total: 38, concluidos: 12, emAndamento: 20, atrasados: 6 }
+      })
+
+      setActivities([
+        {
+          id: '1',
+          type: 'certificacao',
+          employee: 'João Silva',
+          description: 'Obteve certificação AWS Solutions Architect',
+          time: 'Há 2 horas',
+          status: 'completed'
+        },
+        {
+          id: '2',
+          type: 'pdi',
+          employee: 'Maria Santos',
+          description: 'PDI vencendo em 7 dias',
+          time: 'Há 4 horas',
+          status: 'warning'
+        },
+        {
+          id: '3',
+          type: '1x1',
+          employee: 'Pedro Oliveira',
+          description: 'Reunião 1:1 agendada para amanhã',
+          time: 'Há 6 horas',
+          status: 'pending'
+        }
+      ])
+
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="bg-ol-bg dark:bg-darkOl-bg min-h-screen p-6">
-      {/* Cabeçalho */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-ol-black dark:text-darkOl-white">
-          Bem-vindo, {user?.full_name ?? 'Colaborador'}! 👋
-        </h1>
-        <p className="text-ol-grayMedium dark:text-darkOl-grayMedium mt-2">
-          Aqui está um resumo do que está acontecendo na sua organização
-        </p>
-        {error && <p className="text-red-600 mt-2">Erro ao carregar colaboradores: {error}</p>}
-      </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">
+            Bem-vindo ao sistema de Gestão 360 - OL Tecnologia
+          </p>
+        </div>
 
-      {/* Cards estatísticos */}
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => (
-          <StatCard key={stat.name} {...stat} />
-        ))}
-      </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Colaboradores Ativos"
+            value={stats.colaboradores.ativos}
+            subtitle={`${stats.colaboradores.total} total`}
+            icon={<Users className="w-6 h-6 text-blue-600" />}
+            color="border-blue-600"
+            trend="+5% este mês"
+          />
 
-      {/* Parte baixa da dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Atividades Recentes */}
-        <div className="bg-ol-white dark:bg-darkOl-grayLight rounded-xl shadow-lg p-8 border border-ol-grayMedium hover:shadow-xl transition-all">
-          <h2 className="text-xl font-bold text-ol-black dark:text-darkOl-white mb-4">Atividades Recentes</h2>
-          <div className="space-y-4">
-            {recentActivities.map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-start space-x-3 pb-4 border-b border-ol-grayMedium dark:border-darkOl-grayMedium last:border-b-0"
-              >
-                <div className="w-2 h-2 bg-ol-primary rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-ol-black dark:text-darkOl-white">{activity.action}</p>
-                  <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                    {activity.user} • {activity.time}
-                  </p>
+          <StatCard
+            title="Conhecimentos"
+            value={stats.conhecimentos.total}
+            subtitle={`${stats.conhecimentos.certificacoes} certificações`}
+            icon={<BookOpen className="w-6 h-6 text-green-600" />}
+            color="border-green-600"
+            trend="+12 novos"
+          />
+
+          <StatCard
+            title="PDI em Andamento"
+            value={stats.pdi.emAndamento}
+            subtitle={`${stats.pdi.concluidos} concluídos`}
+            icon={<TrendingUp className="w-6 h-6 text-purple-600" />}
+            color="border-purple-600"
+          />
+
+          <StatCard
+            title="Alertas Ativos"
+            value={stats.alertas.total}
+            subtitle={`${stats.alertas.criticos} críticos`}
+            icon={<AlertCircle className="w-6 h-6 text-red-600" />}
+            color="border-red-600"
+          />
+        </div>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Status dos Colaboradores */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Status dos Colaboradores</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Ativos</span>
+                </div>
+                <span className="text-sm font-semibold">{stats.colaboradores.ativos}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Férias</span>
+                </div>
+                <span className="text-sm font-semibold">{stats.colaboradores.ferias}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Afastados</span>
+                </div>
+                <span className="text-sm font-semibold">{stats.colaboradores.afastados}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Progresso do PDI */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Progresso do PDI</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Concluídos</span>
+                  <span className="font-semibold">
+                    {stats.pdi.concluidos}/{stats.pdi.total}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-500 h-2 rounded-full transition-all"
+                    style={{ width: `${(stats.pdi.concluidos / stats.pdi.total) * 100}%` }}
+                  ></div>
                 </div>
               </div>
-            ))}
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Em Andamento</span>
+                  <span className="font-semibold">
+                    {stats.pdi.emAndamento}/{stats.pdi.total}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${(stats.pdi.emAndamento / stats.pdi.total) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Atrasados</span>
+                  <span className="font-semibold text-red-600">
+                    {stats.pdi.atrasados}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-red-500 h-2 rounded-full transition-all"
+                    style={{ width: `${(stats.pdi.atrasados / stats.pdi.total) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Próximos Eventos */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Próximos Eventos
+            </h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-sm font-medium text-blue-900">Reunião 1:1</p>
+                <p className="text-xs text-blue-700">Amanhã, 14:00</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                <p className="text-sm font-medium text-purple-900">Avaliação PDI</p>
+                <p className="text-xs text-purple-700">Em 3 dias</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                <p className="text-sm font-medium text-green-900">Certificação</p>
+                <p className="text-xs text-green-700">Em 7 dias</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Alertas */}
-        <AlertCard alerts={alerts} />
-      </div>
-
-      {/* Espaço para ações rápidas */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8 ">
-        <div className="bg-ol-white dark:bg-darkOl-grayLight rounded-xl shadow-lg p-8 border border-ol-grayMedium hover:shadow-xl transition-all">
-          <h2 className="text-xl font-bold text-ol-black dark:text-darkOl-white mb-4">Ações Rápidas</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Link
-              href="/dashboard/colaboradores/novo"
-              className="p-4 border-2 border-dashed border-ol-grayMedium dark:border-darkOl-grayMedium rounded-lg hover:border-ol-primary dark:hover:border-darkOl-primary hover:bg-ol-bg dark:hover:bg-darkOl-bg transition-all text-center flex flex-col items-center justify-center"
-            >
-              <div className="text-3xl mb-2">➕</div>
-              <p className="text-sm font-semibold text-ol-grayMedium dark:text-darkOl-grayMedium">Novo Colaborador</p>
-            </Link>
-            <Link
-              href="/dashboard/pdi"
-              className="p-4 border-2 border-dashed border-ol-grayMedium dark:border-darkOl-grayMedium rounded-lg hover:border-ol-success dark:hover:border-darkOl-success hover:bg-ol-bg dark:hover:bg-darkOl-bg transition-all text-center"
-            >
-              <div className="text-3xl mb-2">📝</div>
-              <p className="text-sm font-semibold text-ol-grayMedium dark:text-darkOl-grayMedium">Criar PDI</p>
-            </Link>
-            <Link
-              href="/dashboard/one-to-one"
-              className="p-4 border-2 border-dashed border-ol-grayMedium dark:border-darkOl-grayMedium rounded-lg hover:border-purple-500 hover:bg-ol-bg dark:hover:bg-darkOl-bg transition-all text-center"
-            >
-              <div className="text-3xl mb-2">📅</div>
-              <p className="text-sm font-semibold text-ol-grayMedium dark:text-darkOl-grayMedium">Agendar 1:1</p>
-            </Link>
-            <Link
-              href="/dashboard/avaliacoes"
-              className="p-4 border-2 border-dashed border-ol-grayMedium dark:border-darkOl-grayMedium rounded-lg hover:border-yellow-500 hover:bg-ol-bg dark:hover:bg-darkOl-bg transition-all text-center"
-            >
-              <div className="text-3xl mb-2">⭐</div>
-              <p className="text-sm font-semibold text-ol-grayMedium dark:text-darkOl-grayMedium">Nova Avaliação</p>
-            </Link>
-          </div>
-        </div>
-        <div>{/* Espaço para conteúdos extras */}</div>
+        {/* Activity Feed */}
+        <ActivityFeed activities={activities} />
       </div>
     </div>
   )

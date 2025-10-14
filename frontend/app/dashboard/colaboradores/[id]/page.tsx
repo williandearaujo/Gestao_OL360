@@ -1,41 +1,45 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { getColaborador, type Colaborador } from '@/lib/api'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function ColaboradorDetalhesPage() {
-  const params = useParams()
-  const router = useRouter()
-  const [colaborador, setColaborador] = useState<Colaborador | null>(null)
-  const [loading, setLoading] = useState(true)
+  const params = useParams();
+  const router = useRouter();
+  const [colaborador, setColaborador] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadColaborador()
-  }, [])
-
-  const loadColaborador = async () => {
-    try {
-      const data = await getColaborador(params.id as string)
-      setColaborador(data)
-    } catch (error: any) {
-      alert(error.message)
-      router.push('/dashboard/colaboradores')
-    } finally {
-      setLoading(false)
+    async function loadColaborador() {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/employees/${params.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Erro ao carregar dados do colaborador");
+        const data = await res.json();
+        setColaborador(data.data || data);
+      } catch (error: any) {
+        alert(error.message);
+        router.push("/dashboard/colaboradores");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    loadColaborador();
+  }, [params.id, router]);
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ol-primary"></div>
       </div>
-    )
+    );
   }
 
-  if (!colaborador) return null
+  if (!colaborador) return null;
 
   return (
     <div className="bg-ol-bg dark:bg-darkOl-bg min-h-screen max-w-5xl mx-auto p-6 text-ol-black dark:text-darkOl-white">
@@ -67,13 +71,13 @@ export default function ColaboradorDetalhesPage() {
       <div className="mb-6">
         <span
           className={`px-4 py-2 rounded-full text-sm font-semibold ${
-            colaborador.status === 'ATIVO'
-              ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
-              : colaborador.status === 'FERIAS'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-              : colaborador.status === 'AFASTADO'
-              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
-              : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200'
+            colaborador.status === "ATIVO"
+              ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
+              : colaborador.status === "FERIAS"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
+              : colaborador.status === "AFASTADO"
+              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
+              : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
           }`}
         >
           {colaborador.status}
@@ -90,24 +94,40 @@ export default function ColaboradorDetalhesPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">CPF</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.cpf || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">RG</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.rg || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Data de Nascimento</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  CPF
+                </p>
                 <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.data_nascimento
-                    ? new Date(colaborador.data_nascimento).toLocaleDateString('pt-BR')
-                    : '-'}
+                  {colaborador.cpf || "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Estado Civil</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.estado_civil || '-'}</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  RG
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.rg || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Data de Nascimento
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.data_nascimento
+                    ? new Date(colaborador.data_nascimento).toLocaleDateString(
+                        "pt-BR"
+                      )
+                    : "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Estado Civil
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.estado_civil || "-"}
+                </p>
               </div>
             </div>
           </section>
@@ -119,25 +139,45 @@ export default function ColaboradorDetalhesPage() {
             </h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Email Corporativo</p>
-                <p className="font-semibold text-ol-primary dark:text-darkOl-primary">{colaborador.email_corporativo}</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Email Corporativo
+                </p>
+                <p className="font-semibold text-ol-primary dark:text-darkOl-primary">
+                  {colaborador.email_corporativo}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Email Pessoal</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.email_pessoal || '-'}</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Email Pessoal
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.email_pessoal || "-"}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Telefone Corporativo</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.telefone_corporativo || '-'}</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Telefone Corporativo
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.telefone_corporativo || "-"}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Telefone Pessoal</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.telefone_pessoal || '-'}</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Telefone Pessoal
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.telefone_pessoal || "-"}
+                </p>
               </div>
               {colaborador.endereco && (
                 <div>
-                  <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Endereço</p>
-                  <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.endereco}</p>
+                  <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                    Endereço
+                  </p>
+                  <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                    {colaborador.endereco}
+                  </p>
                 </div>
               )}
             </div>
@@ -150,24 +190,39 @@ export default function ColaboradorDetalhesPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Cargo</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.cargo}</p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Departamento</p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">{colaborador.departamento}</p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Data de Admissão</p>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Cargo
+                </p>
                 <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {new Date(colaborador.data_admissao).toLocaleDateString('pt-BR')}
+                  {colaborador.cargo}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Departamento
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.departamento}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Data de Admissão
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {new Date(colaborador.data_admissao).toLocaleDateString("pt-BR")}
                 </p>
               </div>
               {colaborador.salario && (
                 <div>
-                  <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Salário</p>
+                  <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                    Salário
+                  </p>
                   <p className="font-semibold text-ol-success dark:text-darkOl-success">
-                    R$ {colaborador.salario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R${" "}
+                    {colaborador.salario.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
               )}
@@ -179,7 +234,9 @@ export default function ColaboradorDetalhesPage() {
         <aside className="space-y-6">
           {/* Ações Rápidas */}
           <section className="bg-ol-white dark:bg-darkOl-grayLight rounded-lg shadow p-6">
-            <h3 className="font-semibold text-ol-black dark:text-darkOl-white mb-4">Ações Rápidas</h3>
+            <h3 className="font-semibold text-ol-black dark:text-darkOl-white mb-4">
+              Ações Rápidas
+            </h3>
             <div className="space-y-2">
               <button className="w-full text-left px-4 py-2 bg-ol-primary-light dark:bg-darkOl-primary-light text-ol-primary dark:text-darkOl-primary rounded-lg hover:bg-ol-primary-light-hover dark:hover:bg-darkOl-primary-light-hover transition-colors">
                 📈 Ver PDI
@@ -195,18 +252,28 @@ export default function ColaboradorDetalhesPage() {
 
           {/* Estatísticas */}
           <section className="bg-ol-white dark:bg-darkOl-grayLight rounded-lg shadow p-6">
-            <h3 className="font-semibold text-ol-black dark:text-darkOl-white mb-4">Estatísticas</h3>
+            <h3 className="font-semibold text-ol-black dark:text-darkOl-white mb-4">
+              Estatísticas
+            </h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">PDIs Ativos</span>
-                <span className="font-bold text-ol-primary dark:text-darkOl-primary">3</span>
+                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  PDIs Ativos
+                </span>
+                <span className="font-bold text-ol-primary dark:text-darkOl-primary">
+                  3
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">One-to-Ones</span>
+                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  One-to-Ones
+                </span>
                 <span className="font-bold text-purple-600">12</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">Avaliações</span>
+                <span className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Avaliações
+                </span>
                 <span className="font-bold text-yellow-600">5</span>
               </div>
             </div>
@@ -214,5 +281,5 @@ export default function ColaboradorDetalhesPage() {
         </aside>
       </div>
     </div>
-  )
+  );
 }

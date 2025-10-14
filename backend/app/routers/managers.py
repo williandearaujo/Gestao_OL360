@@ -1,40 +1,45 @@
+# ===========================================================================
+# Arquivo: backend/app/routers/managers.py
+# ===========================================================================
 """
-Router de Managers
+Router de Gestores
 """
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import logging
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
 
-logger = logging.getLogger(__name__)
+from app.database import get_db
+from app.models.user import User
+from app.models.manager import Manager
+from app.core.security import get_current_user
+from app.schemas.organization import ManagerCreate, ManagerResponse
 
 router = APIRouter(prefix="/managers", tags=["Gestores"])
 
-@router.get("/")
-async def list_managers():
-    """Listar todos os gestores"""
-    try:
-        managers = []
-        return {"success": True, "data": managers, "total": len(managers)}
-    except Exception as e:
-        logger.error(f"Erro ao listar gestores: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{manager_id}")
-async def get_manager(manager_id: int):
-    """Obter detalhes de um gestor"""
-    return {"success": True, "data": {"id": manager_id}}
+@router.get("/", response_model=List[ManagerResponse])
+async def list_managers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Lista todos os gestores"""
+    managers = db.query(Manager).filter(Manager.ativo == "ATIVO").all()
+    return managers
 
-@router.post("/")
-async def create_manager(data: Dict[str, Any]):
-    """Criar novo gestor"""
-    return {"success": True, "message": "Gestor criado com sucesso"}
 
-@router.put("/{manager_id}")
-async def update_manager(manager_id: int, data: Dict[str, Any]):
-    """Atualizar gestor"""
-    return {"success": True, "message": "Gestor atualizado com sucesso"}
-
-@router.delete("/{manager_id}")
-async def delete_manager(manager_id: int):
-    """Deletar gestor"""
-    return {"success": True, "message": "Gestor deletado com sucesso"}
+@router.post("/", response_model=ManagerResponse, status_code=status.HTTP_201_CREATED)
+async def create_manager(
+    manager_data: ManagerCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Cria um novo gestor"""
+    if current_user.role not in ["ADMIN", "DIRETORIA"]:
+        raise HTTPException(status_code=403, detail="Sem permissão")
+    
+    manager = Manager(**manager_data.model_dump())
+    db.add(manager)
+    db.commit()
+    db.refresh(manager)
+    
+    return manager

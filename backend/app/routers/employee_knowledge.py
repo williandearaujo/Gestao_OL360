@@ -1,85 +1,113 @@
-# ==================== employee_knowledge.py ====================
+# ===========================================================================
+# Arquivo: backend/app/routers/employee_knowledge.py
+# ===========================================================================
 """
-Router de Employee Knowledge (Vínculos)
+Router de Vínculos Colaborador-Conhecimento
 """
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import logging
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+from app.database import get_db
+from app.models.user import User
+from app.models.employee_knowledge import EmployeeKnowledge
+from app.core.security import get_current_user
+from app.schemas.employee_knowledge import (
+    EmployeeKnowledgeCreate,
+    EmployeeKnowledgeUpdate,
+    EmployeeKnowledgeResponse
+)
 
 router = APIRouter(prefix="/employee-knowledge", tags=["Vínculos"])
 
-@router.get("/")
-async def list_employee_knowledge():
-    """Listar todos os vínculos"""
-    try:
-        links = []
-        return {"success": True, "data": links, "total": len(links)}
-    except Exception as e:
-        logger.error(f"Erro ao listar vínculos: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{link_id}")
-async def get_employee_knowledge(link_id: int):
-    """Obter detalhes de um vínculo"""
-    return {"success": True, "data": {"id": link_id}}
+@router.get("/", response_model=List[EmployeeKnowledgeResponse])
+async def list_employee_knowledge(
+        employee_id: Optional[int] = Query(None),
+        knowledge_id: Optional[int] = Query(None),
+        status: Optional[str] = Query(None),
+        skip: int = 0,
+        limit: int = 100,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Lista vínculos entre colaboradores e conhecimentos"""
+    query = db.query(EmployeeKnowledge)
 
-@router.post("/")
-async def create_employee_knowledge(data: Dict[str, Any]):
-    """Criar novo vínculo"""
-    return {"success": True, "message": "Vínculo criado com sucesso"}
+    if employee_id:
+        query = query.filter(EmployeeKnowledge.employee_id == employee_id)
+    if knowledge_id:
+        query = query.filter(EmployeeKnowledge.knowledge_id == knowledge_id)
+    if status:
+        query = query.filter(EmployeeKnowledge.status == status)
 
-# ==================== managers.py ====================
-"""
-Router de Managers
-"""
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import logging
+    vinculos = query.offset(skip).limit(limit).all()
+    return vinculos
 
-logger = logging.getLogger(__name__)
 
-router_managers = APIRouter(prefix="/managers", tags=["Gestores"])
+@router.post("/", response_model=EmployeeKnowledgeResponse, status_code=status.HTTP_201_CREATED)
+async def create_employee_knowledge(
+        vinculo_data: EmployeeKnowledgeCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Cria um novo vínculo colaborador-conhecimento"""
+    # Verificar se já existe
+    existing = db.query(EmployeeKnowledge).filter(
+        EmployeeKnowledge.employee_id == vinculo_data.employee_id,
+        EmployeeKnowledge.knowledge_id == vinculo_data.knowledge_id
+    ).first()
 
-@router_managers.get("/")
-async def list_managers():
-    """Listar todos os gestores"""
-    try:
-        managers = []
-        return {"success": True, "data": managers, "total": len(managers)}
-    except Exception as e:
-        logger.error(f"Erro ao listar gestores: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vínculo já existe"
+        )
 
-# ==================== knowledge.py ====================
-"""
-Router de Knowledge
-"""
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import logging
+    vinculo = EmployeeKnowledge(**vinculo_data.model_dump())
+    db.add(vinculo)
+    db.commit()
+    db.refresh(vinculo)
 
-logger = logging.getLogger(__name__)
+    return vinculo
 
-router_knowledge = APIRouter(prefix="/knowledge", tags=["Conhecimentos"])
 
-@router_knowledge.get("/")
-async def list_knowledge():
-    """Listar todos os conhecimentos"""
-    try:
-        knowledge = []
-        return {"success": True, "data": knowledge, "total": len(knowledge)}
-    except Exception as e:
-        logger.error(f"Erro ao listar conhecimentos: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@router.put("/{vinculo_id}", response_model=EmployeeKnowledgeResponse)
+async def update_employee_knowledge(
+        vinculo_id: int,
+        vinculo_data: EmployeeKnowledgeUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Atualiza um vínculo"""
+    vinculo = db.query(EmployeeKnowledge).filter(EmployeeKnowledge.id == vinculo_id).first()
 
-@router_knowledge.get("/{knowledge_id}")
-async def get_knowledge(knowledge_id: int):
-    """Obter detalhes de um conhecimento"""
-    return {"success": True, "data": {"id": knowledge_id}}
+    if not vinculo:
+        raise HTTPException(status_code=404, detail="Vínculo não encontrado")
 
-@router_knowledge.post("/")
-async def create_knowledge(data: Dict[str, Any]):
-    """Criar novo conhecimento"""
-    return {"success": True, "message": "Conhecimento criado com sucesso"}
+    update_data = vinculo_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(vinculo, field, value)
+
+    db.commit()
+    db.refresh(vinculo)
+
+    return vinculo
+
+
+@router.delete("/{vinculo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_employee_knowledge(
+        vinculo_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Remove um vínculo"""
+    vinculo = db.query(EmployeeKnowledge).filter(EmployeeKnowledge.id == vinculo_id).first()
+
+    if not vinculo:
+        raise HTTPException(status_code=404, detail="Vínculo não encontrado")
+
+    db.delete(vinculo)
+    db.commit()
+
+    return None

@@ -1,84 +1,92 @@
-# backend/app/routers/auth.py
-from fastapi import APIRouter, Depends, HTTPException, status
+"""
+Router de Autenticação - Versão com banco, bcrypt e JWT
+"""
+from fastapi import APIRouter, HTTPException, status, Request, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
+import logging
 
+from app.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
-from app.core.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    create_refresh_token,
-    get_current_user
-)
+from app.core.security import verify_password
+from app.core.security import create_access_token
+from app.schemas.auth import LoginRequest, Token, UserResponse
 
-router = APIRouter(prefix="/auth")
+logger = logging.getLogger(__name__)
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+router = APIRouter(prefix="/auth", tags=["🔐 Autenticação"])
 
-class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    user: dict
+# ============================================================================
+# ENDPOINTS
+# ============================================================================
 
-@router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Login do usuário"""
-    # Buscar usuário
-    user = db.query(User).filter(User.email == request.email).first()
+@router.post("/login", response_model=Token)
+async def login(request: Request, credentials: LoginRequest, db: Session = Depends(get_db)):
+    logger.info("=" * 50)
+    logger.info("📥 REQUEST RECEBIDA NO BACKEND")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    logger.info(f"✅ Body recebido (via Pydantic): Email: {credentials.email} | Password length: {len(credentials.password)}")
 
-    if not user or not verify_password(request.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou senha incorretos"
-        )
+    user = db.query(User).filter(User.email == credentials.email).first()
+
+    if not user:
+        logger.error(f"❌ Usuário não encontrado: {credentials.email}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou senha incorretos")
+
+    if not verify_password(credentials.password, user.hashed_password):
+        logger.error(f"❌ Senha incorreta para: {credentials.email}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou senha incorretos")
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuário inativo"
-        )
+        logger.error(f"❌ Usuário inativo: {credentials.email}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
 
-    # Atualizar last_login
     user.last_login = datetime.utcnow()
+    user.login_count = (user.login_count or 0) + 1
     db.commit()
 
-    # Gerar tokens
-    access_token = create_access_token(
-        data={"sub": str(user.id), "role": user.role}
-    )
-    refresh_token = create_refresh_token(str(user.id))
+    access_token = create_access_token({"sub": str(user.id), "role": user.role, "is_admin": user.is_admin})
 
-    return {
+    response_data = {
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
-            "id": str(user.id),
+            "id": user.id,
+            "username": user.username,
             "email": user.email,
-            "full_name": user.full_name,
             "role": user.role,
+            "is_active": user.is_active,
+            "is_admin": user.is_admin,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "login_count": user.login_count,
         }
     }
 
-@router.get("/me")
-async def get_me(current_user: User = Depends(get_current_user)):
-    """Retorna usuário atual"""
-    return {
-        "id": str(current_user.id),
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "role": current_user.role,
-        "is_active": current_user.is_active,
-    }
+    logger.info(f"✅ LOGIN SUCCESSFUL - Token gerado para: {credentials.email}")
+    logger.info("=" * 50)
+
+    return response_data
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_route(current_user: User = Depends(get_current_user)):
+    """Rota protegida que retorna o usuário atual"""
+    return current_user
+
 
 @router.post("/logout")
 async def logout(current_user: User = Depends(get_current_user)):
-    """Logout do usuário"""
-    # TODO: Adicionar token à blacklist
-    return {"message": "Logout realizado com sucesso"}
+    """Logout simulado, rota protegida"""
+    return {"message": f"Logout realizado com sucesso para {current_user.email}"}
+
+
+@router.get("/health")
+async def auth_health():
+    return {
+        "status": "ok",
+        "message": "🔐 Autenticação funcionando",
+        "endpoint": "/auth/login"
+    }
