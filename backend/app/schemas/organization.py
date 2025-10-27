@@ -214,8 +214,8 @@ class OrganizationStatistics(BaseModel):
 # ============================================================================
 
 class ManagerCreate(BaseModel):
-    employee_id: int
-    area_id: int
+    employee_id: UUID # MUDANÇA: de int para UUID
+    area_id: UUID # MUDANÇA: de int para UUID
     nivel_hierarquico: Optional[int] = Field(default=1)
     tipo_lideranca: Optional[str] = None
 
@@ -223,10 +223,11 @@ class ManagerCreate(BaseModel):
         from_attributes = True
 
 class ManagerResponse(ManagerCreate):
-    id: int
+    id: UUID # MUDANÇA: de int para UUID
     ativo: str = "ATIVO"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+

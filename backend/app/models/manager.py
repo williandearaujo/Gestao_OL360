@@ -1,28 +1,28 @@
 """
-Models Manager - Gestores
+Models Manager - Representa um Gestor (que também é um Employee)
 """
 import uuid
-from sqlalchemy import Column, String, ForeignKey, Integer
+from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+
 from app.models.base import Base
+# Importar Employee aqui para referência explícita no foreign_keys
+from app.models.employee import Employee
 
 class Manager(Base):
     __tablename__ = "managers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
-    # Relacionamento 1:1 com Employee
+    # Relação 1: Um Manager É um Employee (one-to-one)
     employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), unique=True, nullable=False)
-    
-    # Nível de gestão (ex: 1-Diretor, 2-Gerente, 3-Coordenador)
-    management_level = Column(Integer, nullable=True) 
-    
-    # Relacionamentos
-    # Um gerente é um funcionário
-    employee = relationship("Employee", back_populates="manager_profile", uselist=False)
-    
-    # Um gerente pode gerenciar múltiplos funcionários (se for o manager_id deles)
-    employees_managed = relationship("Employee", back_populates="manager", foreign_keys="[Employee.manager_id]")
+    employee = relationship("Employee", back_populates="manager_profile") # Ligação para o perfil de funcionário DESTE gerente
 
-  
+    # Relação 2: Um Manager Gerencia vários Employees (one-to-many)
+    # MUDANÇA: Especificar 'foreign_keys' para dizer qual coluna usar na tabela Employee
+    #          para encontrar os funcionários gerenciados POR ESTE gerente.
+    employees = relationship(
+        "Employee",
+        back_populates="manager",
+        foreign_keys=[Employee.manager_id] # Usar a coluna manager_id da tabela Employee
+    )

@@ -1,98 +1,29 @@
-"""
-Routers - Gestão 360
-"""
-import logging
-from fastapi import APIRouter
+# Este arquivo __init__.py exporta os routers para serem usados no main.py
 
-logger = logging.getLogger(__name__)
+from .auth import router as auth_router
+from .admin import router as admin_router
+from .employees import router as employees_router
+from .employee_knowledge import router as employee_knowledge_router
+from .knowledge import router as knowledge_router
+from .areas import router as areas_router
+from .teams import router as teams_router
+from .managers import router as manager_router # Nome da variável aqui pode ser manager_router
+from .alerts import router as alerts_router
+from .vacations import router as vacations_router
+# Adicione outros routers aqui conforme são criados
+# Ex: from .clients import router as clients_router
 
-# Auth
-try:
-    from .auth import router as auth
-    logger.info("✅ Auth")
-except ImportError:
-    auth = APIRouter(prefix="/auth", tags=["Auth"])
-
-# Admin
-try:
-    from .admin import router as admin
-    logger.info("✅ Admin")
-except ImportError:
-    admin = APIRouter(prefix="/admin", tags=["Administração"])
-
-# Employee
-try:
-    from .employee import router as employee
-    logger.info("✅ Employee")
-except ImportError:
-    employee = APIRouter(prefix="/employee", tags=["Colaboradores"])
-
-# Area
-try:
-    from .area import router as area
-    logger.info("✅ Area")
-except ImportError:
-    area = APIRouter(prefix="/area", tags=["Áreas"])
-
-# Team
-try:
-    from .team import router as team
-    logger.info("✅ Team")
-except ImportError:
-    team = APIRouter(prefix="/team", tags=["Times"])
-
-# Manager
-try:
-    from .managers import router as manager
-    logger.info("✅ Manager")
-except ImportError:
-    manager = APIRouter(prefix="/manager", tags=["Gestores"])
-
-# Knowledge
-try:
-    from .knowledge import router as knowledge
-    logger.info("✅ Knowledge")
-except ImportError:
-    knowledge = APIRouter(prefix="/knowledge", tags=["Conhecimentos"])
-
-# Employee Knowledge
-try:
-    from .employee_knowledge import router as employee_knowledge
-    logger.info("✅ Employee Knowledge")
-except ImportError:
-    employee_knowledge = APIRouter(prefix="/employee-knowledge", tags=["Vínculos"])
-
-# Alerts
-try:
-    from .alerts import router as alerts
-    logger.info("✅ Alerts")
-except ImportError:
-    alerts = APIRouter(prefix="/alerts", tags=["Alertas"])
-
-# PDI
-try:
-    from .pdi import router as pdi
-    logger.info("✅ PDI")
-except ImportError:
-    pdi = APIRouter(prefix="/pdi", tags=["PDI"])
-
-# One to One
-try:
-    from .one_to_one import router as one_to_one
-    logger.info("✅ One to One")
-except ImportError:
-    one_to_one = APIRouter(prefix="/one-to-one", tags=["1x1"])
-
-# User
-try:
-    from .vacations import router as vacations
-    logger.info("✅ Vacations")
-except ImportError:
-    user = APIRouter(prefix="/vacations", tags=["Férias"])
-
-__all__ = [
-    "auth", "admin", "employee", "area", "team",
-    "manager", "knowledge", "employee_knowledge",
-    "alerts", "pdi", "one_to_one",
-    "vacations"
-]
+# Você pode definir __all__ se quiser ser explícito sobre o que é exportado,
+# mas importar com 'as nome_especifico' geralmente é suficiente.
+# __all__ = [
+#     "auth_router",
+#     "admin_router",
+#     "employees_router",
+#     "employee_knowledge_router",
+#     "knowledge_router",
+#     "areas_router",
+#     "teams_router",
+#     "manager_router",
+#     "alerts_router",
+#     "vacations_router",
+# ]

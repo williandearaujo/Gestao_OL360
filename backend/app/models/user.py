@@ -1,44 +1,45 @@
 """
-Model de Usuário
-Gestão 360 - OL Tecnologia
+Models User - Representa um usuário do sistema (com login e senha)
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+import uuid
+from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
-from app.models.base import Base
+from werkzeug.security import generate_password_hash, check_password_hash
 
+from app.models.base import Base
+# Importar Employee explicitamente ajuda com a definição da relação
+from app.models.employee import Employee
 
 class User(Base):
-    """Model de Usuário do sistema"""
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    email = Column(String(320), unique=True, nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(50), nullable=False, default="colaborador")
-    is_active = Column(Boolean, nullable=False, default=True)
-    is_admin = Column(Boolean, nullable=False, default=False)
+    role = Column(String(50), default="colaborador") # Ex: admin, gerente, colaborador
+    is_active = Column(Boolean, default=True)
 
+    # Chave estrangeira para ligar User a Employee (NÃO NULA)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), unique=True, nullable=False)
+
+    # Relacionamento One-to-One com Employee
+    employee = relationship(
+        "Employee",
+        back_populates="user",
+        uselist=False,
+        # MUDANÇA: Especificando explicitamente a condição de join
+        primaryjoin="User.employee_id == Employee.id"
+    )
+
+    # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    last_login = Column(DateTime(timezone=True))
-    login_count = Column(Integer, default=0)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relacionamento com Employee
-    employee = relationship("Employee", back_populates="user", uselist=False)
+    def set_password(self, password):
+        self.hashed_password = generate_password_hash(password)
 
-    def to_dict(self):
-        return {
-            "id": str(self.id),
-            "username": self.username,
-            "email": self.email,
-            "role": self.role,
-            "is_active": self.is_active,
-            "is_admin": self.is_admin,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_login": self.last_login.isoformat() if self.last_login else None,
-            "login_count": self.login_count,
-        }
+    def check_password(self, password):
+        return check_password_hash(self.hashed_password, password)
+

@@ -17,5 +17,6 @@ class Area(Base):
     # Relacionamento: Uma área pode ter múltiplos funcionários
     employees = relationship("Employee", back_populates="area")
 
-   
+    # MUDANÇA: Adicionando o relacionamento reverso com Team que estava faltando
+    teams = relationship("Team", back_populates="area")
 

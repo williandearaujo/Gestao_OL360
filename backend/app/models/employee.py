@@ -1,82 +1,72 @@
 """
-Models Employee - Colaboradores
+Models Employee - Representa um Colaborador
 """
 import uuid
 from sqlalchemy import (
-    Column, String, Date, ForeignKey, Integer,
-    Enum as SQLEnum, Text, Numeric, DateTime
+    Column, String, Date, ForeignKey, Text, Boolean, Integer, DateTime
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.models.base import Base
-import enum
 
-class EmployeeStatus(str, enum.Enum):
-    ATIVO = "ATIVO"
-    INATIVO = "INATIVO"
-    FERIAS = "FERIAS"
-    DAYOFF = "DAYOFF"
-    DESLIGADO = "DESLIGADO"
+from app.models.base import Base
+# Importar Team para referência explícita no foreign_keys
+from app.models.team import Team
 
 class Employee(Base):
     __tablename__ = "employees"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
-    # Informações Básicas
-    nome_completo = Column(String(255), nullable=False)
-    email = Column(String(100), unique=True, index=True, nullable=False)
-    
-    # Informações Pessoais
-    cpf = Column(String(14), unique=True, nullable=True)
-    rg = Column(String(20), nullable=True)
-    data_nascimento = Column(Date, nullable=True)
-    telefone = Column(String(20), nullable=True)
-    telefone_pessoal = Column(String(20), nullable=True)
-    email_pessoal = Column(String(100), nullable=True)
-    endereco = Column(Text, nullable=True)
-    contato_emergencia = Column(String(255), nullable=True)
-    
-    # Informações Profissionais
-    cargo = Column(String(100), nullable=False)
-    data_admissao = Column(Date, nullable=True)
-    salario = Column(Numeric(10, 2), nullable=True)
-    departamento = Column(String(100), nullable=True) # Pode ser substituído por Area
-    senioridade = Column(String(50), nullable=True)
-    status = Column(SQLEnum(EmployeeStatus), nullable=False, default=EmployeeStatus.ATIVO)
+    nome_completo = Column(String(100), nullable=False)
+    email_pessoal = Column(String(100), unique=True)
+    email_corporativo = Column(String(100), unique=True, nullable=False)
+    telefone_pessoal = Column(String(20))
+    telefone_corporativo = Column(String(20))
+    data_nascimento = Column(Date)
+    cpf = Column(String(14), unique=True)
+    rg = Column(String(20))
+    endereco_completo = Column(Text)
+    contato_emergencia_nome = Column(String(100))
+    contato_emergencia_telefone = Column(String(20))
+    data_admissao = Column(Date, nullable=False)
+    cargo = Column(String(100))
+    senioridade = Column(String(50)) # Ex: Trainee, Junior, Pleno, Senior, Especialista
+    status = Column(String(20), default="ATIVO") # ATIVO, INATIVO, FERIAS, DAYOFF
 
-    # Chaves Estrangeiras
-    area_id = Column(UUID(as_uuid=True), ForeignKey("areas.id"), nullable=True)
-    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
-    manager_id = Column(UUID(as_uuid=True), ForeignKey("managers.id"), nullable=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=True)
-
-    # Datas de Acompanhamento (Simplificado conforme PRD)
+    # Campos para PDI e 1x1 simplificados (conforme PRD)
     data_proximo_pdi = Column(Date, nullable=True)
-    data_ultima_1x1 = Column(Date, nullable=True)
     data_proxima_1x1 = Column(Date, nullable=True)
+    data_ultima_1x1 = Column(Date, nullable=True)
+    data_ultimo_pdi = Column(Date, nullable=True)
 
-    # Dados de Férias (JSONB para flexibilidade, como no PRD)
-    ferias_dados = Column(JSONB, nullable=True, 
-                          default=lambda: {"periodos_agendados": [], "dias_disponiveis": 30, "vencimento_proximo_periodo": None})
+    # Campo para Férias (conforme PRD e correção anterior)
+    ferias_dados = Column(JSONB, nullable=True, default=lambda: {"periodos": [], "dias_disponiveis": 0})
+
+    # Chaves Estrangeiras e Relacionamentos
+    area_id = Column(UUID(as_uuid=True), ForeignKey("areas.id"), nullable=True)
+    area = relationship("Area", back_populates="employees")
+
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
+    # MUDANÇA: Especificar 'foreign_keys' para dizer qual coluna usar nesta tabela (Employee)
+    #          para encontrar o time ao qual ESTE funcionário pertence.
+    team = relationship(
+        "Team",
+        back_populates="employees",
+        foreign_keys=[team_id] # Usar a coluna team_id desta tabela (Employee)
+    )
+
+    manager_id = Column(UUID(as_uuid=True), ForeignKey("managers.id"), nullable=True) # ID do Manager que gerencia este Employee
+    manager = relationship("Manager", back_populates="employees", foreign_keys=[manager_id]) # Ligação para o gestor
+
+    # Relacionamento reverso para Manager (quando este Employee é um Manager)
+    manager_profile = relationship("Manager", back_populates="employee", uselist=False, cascade="all, delete-orphan") # Perfil de gestor DESTE funcionário
+
+    # Relacionamento com User
+    user = relationship("User", back_populates="employee", uselist=False, cascade="all, delete-orphan")
+
+    # Relacionamento com EmployeeKnowledge
+    knowledges = relationship("EmployeeKnowledge", back_populates="employee", cascade="all, delete-orphan")
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relacionamentos
-    user = relationship("User", back_populates="employee", uselist=False)
-    area = relationship("Area", back_populates="employees")
-    team = relationship("Team", back_populates="employees")
-    manager = relationship("Manager", back_populates="employees_managed", foreign_keys=[manager_id])
-    
-    # MUDANÇA: Removido o relacionamento abaixo, pois deletamos o app/models/pdi.py
-    # pdi = relationship("PDI", back_populates="employee")
-    
-    # MUDANÇA: Removido o relacionamento abaixo, pois deletamos o app/models/one_to_one.py
-    # one_to_one = relationship("OneToOne", back_populates="employee")
-
-    # Relacionamento 1:1 reverso para Manager (se este funcionário for um gerente)
-    manager_profile = relationship("Manager", back_populates="employee", uselist=False, foreign_keys="[Manager.employee_id]")
-
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
