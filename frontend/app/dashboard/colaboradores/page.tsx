@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { PlusCircle, Edit, Eye, Trash2, Users, Loader2 } from "lucide-react"
 import clsx from "clsx"
 import { getEmployees, deleteEmployee } from "@/lib/api"
-import OLButton from "@/components/ui/OLButton"
+import { OLButton } from "@/components/ui/OLButton"
 import OLModal from "@/components/ui/OLModal"
 
 type EmployeeListItem = {

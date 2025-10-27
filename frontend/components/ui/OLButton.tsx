@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from "react";
 import { Loader2 } from "lucide-react";
@@ -16,7 +16,7 @@ interface OLButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
  * Botão padrão OL Tecnologia
  * Compatível com tema claro/escuro, ícones e estado de carregamento.
  */
-export default function OLButton({
+export const OLButton: React.FC<OLButtonProps> = ({
   variant = "primary",
   size = "md",
   loading = false,
@@ -26,7 +26,7 @@ export default function OLButton({
   children,
   disabled,
   ...props
-}: OLButtonProps) {
+}) => {
   const base = `
     inline-flex items-center justify-center font-medium rounded-lg transition-all
     focus:outline-none focus:ring-2 focus:ring-offset-2
@@ -64,4 +64,4 @@ export default function OLButton({
       {!loading && iconRight && <span className="flex-shrink-0">{iconRight}</span>}
     </button>
   );
-}
+};

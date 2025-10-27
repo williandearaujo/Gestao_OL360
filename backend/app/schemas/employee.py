@@ -80,35 +80,8 @@ class EmployeeUpdate(BaseModel):
         from_attributes = True
 
 
-class EmployeeResponse(BaseModel):
-    """Schema de resposta simplificada"""
+class EmployeeResponse(EmployeeBase):
     id: UUID
-    nome_completo: str
-    email_corporativo: EmailStr
-    email_pessoal: Optional[EmailStr] = None
-    cargo: str
-    cpf: Optional[str] = None
-    rg: Optional[str] = None
-    telefone_pessoal: Optional[str] = None
-    telefone_corporativo: Optional[str] = None
-    senioridade: Optional[str] = None
-    status: str
-    data_admissao: Optional[date] = None
-    data_nascimento: Optional[date] = None
-    contato_emergencia_nome: Optional[str] = None
-    contato_emergencia_telefone: Optional[str] = None
-    endereco_completo: Optional[str] = None
-    area: Optional[AreaResponse] = None
-    area_id: Optional[UUID] = None
-    team_id: Optional[UUID] = None
-    manager_id: Optional[UUID] = None
-    data_proximo_pdi: Optional[date] = None
-    data_ultimo_pdi: Optional[date] = None
-    data_proxima_1x1: Optional[date] = None
-    data_ultima_1x1: Optional[date] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    ferias_dados: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

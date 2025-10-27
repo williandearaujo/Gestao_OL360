@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Users, BookOpen } from 'lucide-react'
 import OLCardStats from '@/components/ui/OLCardStats'
-import OLButton from '@/components/ui/OLButton'
+import { OLButton } from '@/components/ui/OLButton'
 import OLModal from '@/components/ui/OLModal'
 import { Vinculo, Colaborador, Conhecimento } from '@/components/vinculos/types'
 import VinculosList from '@/components/vinculos/VinculosList'

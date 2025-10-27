@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.models.manager import Manager
     from app.models.user import User
     from app.models.employee_knowledge import EmployeeKnowledge
-    from app.models.day_off import EmployeeDayOff
+    from app.models.employee_day_off import EmployeeDayOff
     from app.models.one_on_one import EmployeeOneOnOne
     from app.models.pdi_log import EmployeePdiLog
 

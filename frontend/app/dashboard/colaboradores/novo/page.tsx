@@ -1,20 +1,19 @@
-import EmployeeForm from "@/components/employees/EmployeeForm"; // MUDANÇA: Importa o formulário unificado
+import NewEmployeeForm from "@/components/employees/NewEmployeeForm";
 import React from "react";
 
 export default function NovoColaboradorPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
+        <h1 className="text-3xl font-bold text-ol-text dark:text-darkOl-text">
           Adicionar Novo Colaborador
         </h1>
-        <p className="mt-2 text-gray-600">
-          Preencha os dados abaixo para cadastrar um novo colaborador no sistema.
+        <p className="mt-2 text-gray-500 dark:text-gray-400">
+          Preencha os dados básicos para o cadastro rápido.
         </p>
       </header>
 
-      {/* MUDANÇA: Usa o formulário unificado em modo de criação */}
-      <EmployeeForm />
+      <NewEmployeeForm />
     </div>
   );
 }

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import OLButton from "./OLButton";
+import { OLButton } from "./OLButton"; // CORRIGIDO
 
 interface OLModalProps {
   open?: boolean;
