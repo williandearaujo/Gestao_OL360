@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User
+from app.models.employee import Employee
 from app.core.security import get_current_user, hash_password
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 
@@ -123,13 +124,20 @@ async def create_user(
             detail="Username ou email já cadastrado"
         )
 
+    employee = db.query(Employee).filter(Employee.id == user_data.employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Colaborador não encontrado para o usuário informado")
+    if employee.user:
+        raise HTTPException(status_code=400, detail="Este colaborador já possui usuário cadastrado")
+
     new_user = User(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
         role=user_data.role,
         is_active=user_data.is_active,
-        is_admin=user_data.role in ["admin", "diretoria"]
+        is_admin=user_data.role in ["admin", "diretoria"],
+        employee_id=user_data.employee_id
     )
 
     db.add(new_user)
@@ -163,6 +171,13 @@ async def update_user(
         user.is_admin = user_data.role in ["admin", "diretoria"]
     if user_data.is_active is not None:
         user.is_active = user_data.is_active
+    if user_data.employee_id and user_data.employee_id != user.employee_id:
+        employee = db.query(Employee).filter(Employee.id == user_data.employee_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Colaborador não encontrado para o usuário informado")
+        if employee.user and employee.user.id != user.id:
+            raise HTTPException(status_code=400, detail="Este colaborador já possui usuário cadastrado")
+        user.employee_id = user_data.employee_id
 
     db.commit()
     db.refresh(user)

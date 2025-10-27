@@ -5,7 +5,8 @@ import { X } from "lucide-react";
 import OLButton from "./OLButton";
 
 interface OLModalProps {
-  open: boolean;
+  open?: boolean;
+  isOpen?: boolean;
   title?: string;
   children: React.ReactNode;
   onClose: () => void;
@@ -21,6 +22,7 @@ interface OLModalProps {
  */
 export default function OLModal({
   open,
+  isOpen,
   title,
   children,
   onClose,
@@ -29,15 +31,17 @@ export default function OLModal({
   cancelText = "Cancelar",
   loading = false,
 }: OLModalProps) {
+  const visible = open ?? isOpen ?? false;
+
   useEffect(() => {
-    if (open) document.body.style.overflow = "hidden";
+    if (visible) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "auto";
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [open]);
+  }, [visible]);
 
-  if (!open) return null;
+  if (!visible) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">

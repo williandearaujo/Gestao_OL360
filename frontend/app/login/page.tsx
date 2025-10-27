@@ -1,146 +1,116 @@
 'use client'
 
-import { useState, useEffect, FormEvent } from 'react'
+import { FormEvent, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Lock, Eye, EyeOff } from 'lucide-react'
-import { login } from '@/lib/api'
-import Footer from '@/components/Footer'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login, loading } = useAuth()
+  const { theme } = useTheme()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) setTheme(savedTheme)
-    else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      setTheme(prefersDark ? 'dark' : 'light')
-    }
-    // Debug: show API url env variable
-    console.log('API URL:', process.env.NEXTPUBLICAPIURL)
-  }, [])
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    console.log("Tentando login com:", email, password)  // Log de entrada
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
 
     try {
-      const data = await login(email, password)
-      console.log("Resposta login:", data)  // Log da resposta
-
-      localStorage.setItem('token', data.access_token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-
-      console.log("Token armazenado:", localStorage.getItem('token'))  // Verifica token
-      console.log("Usuário armazenado:", localStorage.getItem('user'))  // Verifica usuário
-
-      console.log("Redirecionando para dashboard")
-      router.push('/dashboard')
-
-    } catch (err: any) {
-      console.error("Erro no login:", err)  // Log detalhado do erro
-      setError(err.message || 'Erro ao fazer login')
+      setSubmitting(true)
+      await login(email, password)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Não foi possível realizar o login. Tente novamente.'
+      setError(message)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex flex-col justify-center p-4">
-      <div className="flex-grow flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 animate-fadeIn">
-          <img
-            src={theme === 'dark' ? '/images/lg_t_dark.png' : '/images/lg_t_white.png'}
-            alt="Logo OL Tema"
-            className="mx-auto mb-6 w-40 h-auto select-none"
-            draggable={false}
-          />
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-ol-bg px-4 py-12 text-ol-text dark:bg-darkOl-bg dark:text-darkOl-text">
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-xl transition dark:bg-darkOl-cardBg">
+        <img
+          src={theme === 'dark' ? '/images/lg_t_dark.png' : '/images/lg_t_white.png'}
+          alt="OL Tecnologia"
+          className="mx-auto mb-6 h-16 w-auto select-none"
+          draggable={false}
+        />
 
-          <h1 className="text-3xl font-bold text-center mb-8 text-ol-primary dark:text-darkOl-primary">
-            Gestão 360 OL
-          </h1>
+        <h1 className="mb-4 text-center text-2xl font-semibold text-ol-text dark:text-darkOl-text">
+          Bem-vindo ao Gestão 360
+        </h1>
+        <p className="mb-6 text-center text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+          Faça login para acessar o painel administrativo.
+        </p>
 
-          {error && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded transition animate-shake"
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="admin@ol360.com"
-                required
-                disabled={loading}
-                autoFocus
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ol-primary focus:border-transparent text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Senha
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="admin123"
-                  required
-                  disabled={loading}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ol-primary focus:border-transparent text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(x => !x)}
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  disabled={loading}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              aria-busy={loading}
-              className="w-full bg-ol-primary dark:bg-darkOl-primary text-white py-2 px-4 rounded-lg hover:bg-ol-hover dark:hover:bg-darkOl-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
-
-          <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-            <p>🔐 Credenciais padrão:</p>
-            <p className="font-mono">admin@ol360.com / Admin@123456</p>
-            <p className="font-mono">diretoria@ol360.com / Diretoria@123</p>
-            <p className="font-mono">gerente1@ol360.com / Gerente@123</p>
-            <p className="font-mono">colaborador1@ol360.com / Colab@123</p>
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+            {error}
           </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-ol-text dark:text-darkOl-text" htmlFor="email">
+              E-mail corporativo
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              autoFocus
+              disabled={loading || submitting}
+              placeholder="diretoria@ol360.com"
+              className="w-full rounded-lg border border-ol-border bg-white px-4 py-2 text-sm text-ol-text outline-none transition focus:border-ol-primary focus:ring-2 focus:ring-ol-primary/40 dark:border-darkOl-border dark:bg-darkOl-bg dark:text-darkOl-text dark:focus:border-darkOl-primary dark:focus:ring-darkOl-primary/40"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-ol-text dark:text-darkOl-text" htmlFor="password">
+              Senha
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                disabled={loading || submitting}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-ol-border bg-white px-4 py-2 pr-12 text-sm text-ol-text outline-none transition focus:border-ol-primary focus:ring-2 focus:ring-ol-primary/40 dark:border-darkOl-border dark:bg-darkOl-bg dark:text-darkOl-text dark:focus:border-darkOl-primary dark:focus:ring-darkOl-primary/40"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ol-grayMedium transition hover:text-ol-text dark:text-darkOl-grayMedium dark:hover:text-darkOl-text"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || submitting}
+            className="flex w-full items-center justify-center rounded-lg bg-ol-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-ol-hover focus:outline-none focus:ring-2 focus:ring-ol-primary/50 disabled:cursor-not-allowed disabled:bg-ol-grayMedium dark:bg-darkOl-primary dark:hover:bg-darkOl-hover"
+          >
+            {submitting ? 'Entrando...' : 'Entrar'}
+          </button>
+        </form>
+
+        <div className="mt-6 space-y-1 text-center text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+          <p className="font-semibold text-ol-text dark:text-darkOl-text">Acesso rápido para testes:</p>
+          <p>diretoria@ol360.com / 123@mudar</p>
         </div>
       </div>
     </div>

@@ -1,327 +1,284 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import clsx from 'clsx'
 import {
-  Users, BookOpen, Award, TrendingUp, AlertCircle,
-  Calendar, Clock, CheckCircle
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Loader2,
+  Users,
+  BookOpen,
+  Info,
 } from 'lucide-react'
-import OLCardStats from '@/components/ui/OLCardStats'
-import OLButton from '@/components/ui/OLButton'
-import OLModal from '@/components/ui/OLModal'
-import { getColaboradores } from '@/lib/api'
+import {
+  getEmployees,
+  getKnowledge,
+  getAlerts,
+} from '@/lib/api'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
-async function getConhecimentos() {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Token não encontrado')
-
-  const res = await fetch(`${API_URL}/knowledge`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  })
-  if (!res.ok) throw new Error('Erro ao buscar conhecimentos')
-  return res.json()
+type Employee = {
+  id: string
+  nome_completo: string
+  status?: string
+  cargo?: string
+  area?: { nome?: string }
 }
 
-const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
-  <div
-    className={`bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6 border-l-4 ${color} hover:shadow-lg transition-shadow`}
-  >
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <p className="text-sm font-medium text-ol-grayMedium dark:text-darkOl-grayMedium mb-1">{title}</p>
-        <p className="text-3xl font-bold text-ol-text dark:text-darkOl-text">{value}</p>
-        {subtitle && <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium mt-1">{subtitle}</p>}
-        {trend && (
-          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            {trend}
-          </p>
-        )}
-      </div>
-      <div className={`p-3 rounded-lg ${color.replace('border-', 'bg-').replace('600', '100')}`}>
-        {icon}
-      </div>
-    </div>
-  </div>
-)
+type Knowledge = {
+  id: string
+  nome: string
+  tipo?: string
+  status?: string
+}
 
-const ActivityFeed = ({ activities }) => (
-  <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
-    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text dark:text-darkOl-text">
-      <Clock className="w-5 h-5 text-blue-600" />
-      Atividades Recentes
-    </h3>
-    <div className="space-y-3 max-h-96 overflow-y-auto">
-      {activities.map((activity) => (
-        <div
-          key={activity.id}
-          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-darkOl-bg transition-colors border border-ol-border dark:border-darkOl-border"
-        >
-          <div
-            className={`p-2 rounded-full ${
-              activity.status === 'completed'
-                ? 'bg-green-100'
-                : activity.status === 'warning'
-                ? 'bg-yellow-100'
-                : 'bg-blue-100'
-            }`}
-          >
-            {activity.status === 'completed' ? (
-              <CheckCircle className="w-4 h-4 text-green-600" />
-            ) : activity.status === 'warning' ? (
-              <AlertCircle className="w-4 h-4 text-yellow-600" />
-            ) : (
-              <Clock className="w-4 h-4 text-blue-600" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-ol-text dark:text-darkOl-text">{activity.employee}</p>
-            <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">{activity.description}</p>
-            <p className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium mt-1">{activity.time}</p>
-          </div>
-        </div>
-      ))}
+type Alert = {
+  id: number
+  title: string
+  message: string
+  priority?: string
+  is_read?: boolean
+  created_at?: string
+}
+
+interface DashboardState {
+  employees: Employee[]
+  knowledge: Knowledge[]
+  alerts: Alert[]
+}
+
+function StatCard({
+  title,
+  value,
+  icon,
+  description,
+}: {
+  title: string
+  value: number
+  icon: React.ReactNode
+  description: string
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-ol-border bg-white p-4 shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-ol-grayMedium dark:text-darkOl-grayMedium">{title}</p>
+        <span className="text-ol-primary dark:text-darkOl-primary">{icon}</span>
+      </div>
+      <p className="text-3xl font-semibold text-ol-text dark:text-darkOl-text">{value}</p>
+      <span className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">{description}</span>
     </div>
-  </div>
-)
+  )
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-ol-border bg-white p-4 shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
+      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-ol-text dark:text-darkOl-text">
+        {title}
+      </h2>
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-dashed border-ol-border px-4 py-6 text-sm text-ol-grayMedium dark:border-darkOl-border dark:text-darkOl-grayMedium">
+      <Info className="h-4 w-4" />
+      {message}
+    </div>
+  )
+}
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({
-    colaboradores: { total: 0, ativos: 0, ferias: 0, afastados: 0 },
-    conhecimentos: { total: 0, ativos: 0, certificacoes: 0, cursos: 0 },
-    alertas: { total: 5, criticos: 1, avisos: 4 },
-    pdi: { total: 38, concluidos: 12, emAndamento: 20, atrasados: 6 }
+  const [data, setData] = useState<DashboardState>({
+    employees: [],
+    knowledge: [],
+    alerts: [],
   })
-
-  const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadDashboardData()
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [employees, knowledge, alerts] = await Promise.all([
+          getEmployees().catch(() => []),
+          getKnowledge().catch(() => []),
+          getAlerts().catch(() => []),
+        ])
+        setData({
+          employees,
+          knowledge,
+          alerts,
+        })
+      } catch (err) {
+        console.error(err)
+        setError('Não foi possível carregar os dados do dashboard no momento.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
   }, [])
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
+  const employeeStats = useMemo(() => {
+    const total = data.employees.length
+    const statusCount = (status: string) =>
+      data.employees.filter((employee) => employee.status?.toUpperCase() === status).length
 
-      const colaboradores = await getColaboradores()
-      const conhecimentos = await getConhecimentos()
-
-      const totalColaboradores = colaboradores.length
-      const ativos = colaboradores.filter(c => c.status.toLowerCase() === 'ativo').length
-      const ferias = colaboradores.filter(c => c.status.toLowerCase() === 'ferias').length
-      const afastados = colaboradores.filter(c => c.status.toLowerCase() === 'afastado').length
-
-      const totalConhecimentos = conhecimentos.length
-      const ativosConhecimentos = conhecimentos.filter(k => k.status === 'ATIVO').length
-      const certificacoes = conhecimentos.filter(k => k.tipo === 'CERTIFICACAO').length
-      const cursos = conhecimentos.filter(k => k.tipo === 'CURSO').length
-
-      setStats(prev => ({
-        ...prev,
-        colaboradores: { total: totalColaboradores, ativos, ferias, afastados },
-        conhecimentos: { total: totalConhecimentos, ativos: ativosConhecimentos, certificacoes, cursos }
-      }))
-
-      setActivities([
-        {
-          id: '1',
-          type: 'certificacao',
-          employee: colaboradores[0]?.nome || 'Desconhecido',
-          description: 'Obteve certificação AWS Solutions Architect',
-          time: 'Há 2 horas',
-          status: 'completed'
-        },
-        {
-          id: '2',
-          type: 'pdi',
-          employee: colaboradores[1]?.nome || 'Desconhecido',
-          description: 'PDI vencendo em 7 dias',
-          time: 'Há 4 horas',
-          status: 'warning'
-        },
-        {
-          id: '3',
-          type: '1x1',
-          employee: colaboradores[2]?.nome || 'Desconhecido',
-          description: 'Reunião 1:1 agendada para amanhã',
-          time: 'Há 6 horas',
-          status: 'pending'
-        }
-      ])
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error)
-    } finally {
-      setLoading(false)
+    return {
+      total,
+      ativos: statusCount('ATIVO'),
+      ferias: statusCount('FERIAS'),
+      afastados: statusCount('AFASTADO'),
     }
-  }
+  }, [data.employees])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ol-primary mx-auto mb-4"></div>
-          <p className="text-ol-text dark:text-darkOl-text">Carregando dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  const knowledgeStats = useMemo(() => {
+    const total = data.knowledge.length
+    const byType = (type: string) =>
+      data.knowledge.filter((item) => item.tipo?.toUpperCase() === type).length
+
+    return {
+      total,
+      certificacoes: byType('CERTIFICACAO'),
+      cursos: byType('CURSO'),
+      ativos: data.knowledge.filter((item) => item.status?.toUpperCase() === 'ATIVO').length,
+    }
+  }, [data.knowledge])
+
+  const unreadAlerts = useMemo(
+    () => data.alerts.filter((alert) => !alert.is_read),
+    [data.alerts]
+  )
 
   return (
-    <div className="min-h-screen bg-ol-bg p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-ol-text">Dashboard</h1>
-          <p className="text-ol-grayMedium mt-2">
-            Bem-vindo ao sistema de Gestão 360 - OL Tecnologia
+    <div className="space-y-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-ol-text dark:text-darkOl-text">Overview geral</h1>
+          <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+            Acompanhe os principais indicadores da OL Tecnologia.
           </p>
         </div>
+      </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Colaboradores Ativos"
-            value={stats.colaboradores.ativos}
-            subtitle={`${stats.colaboradores.total} total`}
-            icon={<Users className="w-6 h-6 text-info" />}
-            color="border-info"
-            trend="+5% este mês"
-          />
-          <StatCard
-            title="Conhecimentos"
-            value={stats.conhecimentos.total}
-            subtitle={`${stats.conhecimentos.certificacoes} certificações`}
-            icon={<BookOpen className="w-6 h-6 text-emerald-600" />}
-            color="border-emerald-600"
-            trend="+12 novos"
-          />
-          <StatCard
-            title="PDI em Andamento"
-            value={stats.pdi.emAndamento}
-            subtitle={`${stats.pdi.concluidos} concluídos`}
-            icon={<TrendingUp className="w-6 h-6 text-purple-600" />}
-            color="border-purple-600"
-          />
-          <StatCard
-            title="Alertas Ativos"
-            value={stats.alertas.total}
-            subtitle={`${stats.alertas.criticos} críticos`}
-            icon={<AlertCircle className="w-6 h-6 text-danger" />}
-            color="border-danger"
-          />
+      {error && (
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+          <AlertTriangle className="h-4 w-4" />
+          <span>{error}</span>
         </div>
+      )}
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Status dos Colaboradores */}
-          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text">
-              <Users className="w-5 h-5 text-info" />
-              Status dos Colaboradores
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-ol-grayMedium">Ativos</span>
-                </div>
-                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.ativos}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-ol-grayMedium">Férias</span>
-                </div>
-                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.ferias}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-ol-grayMedium">Afastados</span>
-                </div>
-                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.afastados}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Progresso do PDI */}
-          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 text-ol-text">Progresso do PDI</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-ol-grayMedium">Concluídos</span>
-                  <span className="font-semibold text-ol-text">
-                    {stats.pdi.concluidos}/{stats.pdi.total}
-                  </span>
-                </div>
-                <div className="w-full bg-ol-bg rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full transition-all"
-                    style={{ width: `${(stats.pdi.concluidos / stats.pdi.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-ol-grayMedium">Em Andamento</span>
-                  <span className="font-semibold text-ol-text">
-                    {stats.pdi.emAndamento}/{stats.pdi.total}
-                  </span>
-                </div>
-                <div className="w-full bg-ol-bg rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all"
-                    style={{ width: `${(stats.pdi.emAndamento / stats.pdi.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-ol-grayMedium">Atrasados</span>
-                  <span className="font-semibold text-red-600">{stats.pdi.atrasados}</span>
-                </div>
-                <div className="w-full bg-ol-bg rounded-full h-2">
-                  <div
-                    className="bg-red-500 h-2 rounded-full transition-all"
-                    style={{ width: `${(stats.pdi.atrasados / stats.pdi.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Próximos Eventos */}
-          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text">
-              <Calendar className="w-5 h-5 text-info" />
-              Próximos Eventos
-            </h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-sm font-medium text-blue-900">Reunião 1:1</p>
-                <p className="text-xs text-blue-700">Amanhã, 14:00</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                <p className="text-sm font-medium text-purple-900">Avaliação PDI</p>
-                <p className="text-xs text-purple-700">Em 3 dias</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                <p className="text-sm font-medium text-green-900">Certificação</p>
-                <p className="text-xs text-green-700">Em 7 dias</p>
-              </div>
-            </div>
-          </div>
+      {loading ? (
+        <div className="flex items-center justify-center rounded-xl border border-dashed border-ol-border py-12 dark:border-darkOl-border">
+          <Loader2 className="h-6 w-6 animate-spin text-ol-primary dark:text-darkOl-primary" />
         </div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Colaboradores ativos"
+              value={employeeStats.ativos}
+              description={`${employeeStats.total} cadastrados`}
+              icon={<Users className="h-5 w-5" />}
+            />
+            <StatCard
+              title="Conhecimentos catalogados"
+              value={knowledgeStats.total}
+              description={`${knowledgeStats.certificacoes} certificações • ${knowledgeStats.cursos} cursos`}
+              icon={<BookOpen className="h-5 w-5" />}
+            />
+            <StatCard
+              title="Alertas pendentes"
+              value={unreadAlerts.length}
+              description={`${data.alerts.length} alertas no total`}
+              icon={<Bell className="h-5 w-5" />}
+            />
+            <StatCard
+              title="Processos concluídos"
+              value={knowledgeStats.ativos}
+              description="Conhecimentos ativos registrados"
+              icon={<CheckCircle2 className="h-5 w-5" />}
+            />
+          </div>
 
-        {/* Activity Feed */}
-        <ActivityFeed activities={activities} />
-      </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SectionCard title="Alertas recentes">
+              {data.alerts.length === 0 ? (
+                <EmptyState message="Nenhum alerta registrado até o momento." />
+              ) : (
+                <ul className="space-y-3">
+              {data.alerts.slice(0, 5).map((alert) => {
+                const priority = (alert.priority ?? '').toUpperCase()
+                const badgeClass =
+                  priority === 'CRITICAL' || priority === 'HIGH'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-200'
+                    : priority === 'MEDIUM'
+                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-200'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200'
+                return (
+                <li
+                  key={alert.id}
+                  className="rounded-lg border border-ol-border px-4 py-3 text-sm dark:border-darkOl-border"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-ol-text dark:text-darkOl-text">
+                      {alert.title}
+                    </p>
+                    <span
+                      className={clsx('rounded-full px-2 py-0.5 text-xs font-semibold', badgeClass)}
+                    >
+                      {priority || 'SEM PRIORIDADE'}
+                    </span>
+                  </div>
+                  {alert.message && (
+                    <p className="mt-2 text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+                      {alert.message}
+                    </p>
+                  )}
+                </li>
+              )})}
+            </ul>
+          )}
+        </SectionCard>
+
+            <SectionCard title="Distribuição de colaboradores">
+              {data.employees.length === 0 ? (
+                <EmptyState message="Cadastre colaboradores para visualizar esta seção." />
+              ) : (
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center justify-between rounded-lg border border-ol-border px-4 py-3 dark:border-darkOl-border">
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-green-500" />
+                      Ativos
+                    </span>
+                    <strong>{employeeStats.ativos}</strong>
+                  </li>
+                  <li className="flex items-center justify-between rounded-lg border border-ol-border px-4 py-3 dark:border-darkOl-border">
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-blue-500" />
+                      Em férias
+                    </span>
+                    <strong>{employeeStats.ferias}</strong>
+                  </li>
+                  <li className="flex items-center justify-between rounded-lg border border-ol-border px-4 py-3 dark:border-darkOl-border">
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-yellow-500" />
+                      Afastados
+                    </span>
+                    <strong>{employeeStats.afastados}</strong>
+                  </li>
+                </ul>
+              )}
+            </SectionCard>
+          </div>
+        </>
+      )}
     </div>
   )
 }

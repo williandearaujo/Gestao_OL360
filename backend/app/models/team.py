@@ -8,6 +8,10 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from app.models.base import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.employee import Employee
 
 
 class Team(Base):
@@ -26,7 +30,16 @@ class Team(Base):
 
     area = relationship("Area", back_populates="teams")
     lider = relationship("Employee", foreign_keys=[lider_id])
-    members = relationship("Employee", back_populates="team", foreign_keys="Employee.team_id")
+
+    # --- CORREÇÃO AQUI ---
+    # O nome da propriedade deve ser "employees" (para bater com employee.py)
+    # E o back_populates deve ser "team" (para bater com employee.py)
+    employees = relationship(
+        "Employee",
+        back_populates="team",
+        foreign_keys="Employee.team_id"
+    )
+    # --- FIM DA CORREÇÃO ---
 
     def to_dict(self):
         return {
@@ -39,3 +52,5 @@ class Team(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+# A linha duplicada que estava aqui fora foi removida.

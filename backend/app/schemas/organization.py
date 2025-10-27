@@ -17,16 +17,12 @@ class AreaBase(BaseModel):
 
 
 class AreaCreate(AreaBase):
-    responsavel_id: Optional[UUID] = Field(None, description="ID do responsável pela área")
-    budget: Optional[float] = Field(None, ge=0, description="Orçamento da área")
+    pass
 
 
 class AreaUpdate(BaseModel):
     nome: Optional[str] = Field(None, min_length=2, max_length=100)
     descricao: Optional[str] = Field(None, max_length=500)
-    responsavel_id: Optional[UUID] = None
-    budget: Optional[float] = Field(None, ge=0)
-    status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -34,22 +30,13 @@ class AreaUpdate(BaseModel):
 
 class AreaResponse(AreaBase):
     id: UUID
-    responsavel_id: Optional[UUID] = None
-    budget: Optional[float] = None
-    status: str = "ATIVO"
-    total_employees: int = 0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 class AreaDetail(AreaResponse):
-    total_teams: int = 0
-    total_managers: int = 0
-    average_salary: Optional[float] = None
-    departments: List[str] = []
+    pass
 
 
 # ============================================================================
@@ -214,20 +201,14 @@ class OrganizationStatistics(BaseModel):
 # ============================================================================
 
 class ManagerCreate(BaseModel):
-    employee_id: UUID # MUDANÇA: de int para UUID
-    area_id: UUID # MUDANÇA: de int para UUID
-    nivel_hierarquico: Optional[int] = Field(default=1)
-    tipo_lideranca: Optional[str] = None
+    employee_id: UUID
 
     class Config:
         from_attributes = True
+
 
 class ManagerResponse(ManagerCreate):
-    id: UUID # MUDANÇA: de int para UUID
-    ativo: str = "ATIVO"
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    id: UUID
 
     class Config:
         from_attributes = True
-

@@ -4,7 +4,6 @@ Supabase PostgreSQL via SQLAlchemy
 """
 
 from sqlalchemy import create_engine, event, text
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
@@ -12,6 +11,7 @@ from typing import Generator
 import logging
 
 from app.config import settings
+from app.models.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +36,6 @@ SessionLocal = sessionmaker(
     bind=engine,
     expire_on_commit=False
 )
-
-# Base para models
-Base = declarative_base()
-
 
 def get_db() -> Generator[Session, None, None]:
     """Dependency para FastAPI obter sessão do banco"""
@@ -157,4 +153,3 @@ class PaginatedResponse(BaseModel, Generic[T]):
             page_size=page_size,
             total_pages=total_pages
         )
-

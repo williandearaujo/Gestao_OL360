@@ -1,191 +1,154 @@
 'use client'
+
+import clsx from 'clsx'
 import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import {
-  User,
-  BarChart3,
-  Users,
-  BookOpen,
-  Link as LucideLink,
-  Settings,
-  Bell,
-  Sun,
-  Moon,
-} from 'lucide-react'
+import { Menu, Moon, Sun, User } from 'lucide-react'
+import { navigationItems } from '@/components/layout/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 
-type HeaderProps = {
-  theme: 'light' | 'dark'
-  setTheme: (theme: 'light' | 'dark') => void
-}
-
-function Logo({ theme }: { theme: 'light' | 'dark' }) {
-  return (
-    <img
-      src={theme === 'dark' ? '/images/lg_t_dark.png' : '/images/lg_t_white.png'}
-      alt="Logo OL"
-      className="w-28 h-auto select-none"
-      draggable={false}
-    />
-  )
-}
-
-export default function Header({ theme, setTheme }: HeaderProps) {
-  const { user, logout } = useAuth()
+export default function Header() {
   const pathname = usePathname()
-  const companyName = 'OL Gestão 360'
+  const { user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
-  const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'Usuário'
+  const firstName = useMemo(
+    () => (user?.full_name ? user.full_name.split(' ')[0] : 'Usuário'),
+    [user?.full_name]
+  )
 
-  const navigation = [
-    {
-      name: 'Alertas',
-      href: '/dashboard/alertas',
-      icon: <Bell className="w-6 h-6" />,
-      enabled: true,
-      tooltip: 'Veja seus alertas',
-    },
-    {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: <BarChart3 className="w-6 h-6" />,
-      enabled: true,
-    },
-    {
-      name: 'Colaboradores',
-      href: '/dashboard/colaboradores',
-      icon: <Users className="w-6 h-6" />,
-      enabled: true,
-    },
-    {
-      name: 'Conhecimentos',
-      href: '/dashboard/conhecimentos',
-      icon: <BookOpen className="w-6 h-6" />,
-      enabled: true,
-    },
-    {
-      name: 'Vínculos',
-      href: '/dashboard/vinculos',
-      icon: <LucideLink className="w-6 h-6" />,
-      enabled: true,
-    },
-    {
-      name: 'Admin',
-      href: '/dashboard/admin',
-      icon: <Settings className="w-6 h-6 text-[#821314]" />,
-      enabled: true,
-    },
-  ]
-
-  const pageTitles: Record<string, string> = {
-    '/dashboard': 'Dashboard',
-    '/dashboard/colaboradores': 'Colaboradores',
-    '/dashboard/alertas': 'Alertas',
-    '/dashboard/conhecimentos': 'Conhecimentos',
-    '/dashboard/vinculos': 'Vínculos',
-    '/dashboard/admin': 'Administração',
-  }
-
-  const getPageTitle = () => pageTitles[pathname] || 'Sistema'
-
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light')
+  const currentTitle = useMemo(() => {
+    const map: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/dashboard/alertas': 'Alertas',
+      '/dashboard/colaboradores': 'Colaboradores',
+      '/dashboard/conhecimentos': 'Conhecimentos',
+      '/dashboard/vinculos': 'Vínculos',
+      '/dashboard/admin': 'Administração',
+    }
+    return map[pathname] ?? 'Gestão 360'
+  }, [pathname])
 
   return (
-    <header className="bg-ol-primary dark:bg-darkOl-primary text-white shadow-lg sticky top-0 z-50">
-      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo e Nome da Empresa */}
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Logo theme={theme} />
-            </Link>
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold">{companyName}</h1>
-              <p className="text-xs text-ol-grayLight dark:text-darkOl-grayLight">
-                {getPageTitle()}
+    <header className="sticky top-0 z-40 border-b border-ol-border bg-white/90 backdrop-blur-md dark:border-darkOl-border dark:bg-darkOl-cardBg/80">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-lg p-2 text-ol-text hover:bg-ol-bg focus:outline-none focus:ring-2 focus:ring-ol-primary dark:text-darkOl-text dark:hover:bg-darkOl-cardBg lg:hidden"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <img
+              src={theme === 'dark' ? '/images/lg_t_dark.png' : '/images/lg_t_white.png'}
+              alt="OL Tecnologia"
+              className="h-10 w-auto select-none"
+              draggable={false}
+            />
+            <span className="hidden text-base font-semibold text-ol-text dark:text-darkOl-text sm:block">
+              OL Gestão 360
+            </span>
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center justify-end gap-4">
+          <div className="hidden flex-col sm:flex">
+            <span className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+              {new Date().toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                day: '2-digit',
+                month: 'long',
+              })}
+            </span>
+            <strong className="text-sm text-ol-text dark:text-darkOl-text">{currentTitle}</strong>
+          </div>
+
+          <button
+            onClick={toggleTheme}
+            className="rounded-full bg-ol-bg p-2 text-ol-text transition-colors hover:bg-ol-cardBg dark:bg-darkOl-bg dark:text-darkOl-text dark:hover:bg-darkOl-cardBg"
+            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+
+          <div className="flex items-center gap-3 rounded-full bg-ol-cardBg px-3 py-2 text-sm dark:bg-darkOl-cardBg">
+            <div className="hidden sm:block text-right">
+              <p className="font-semibold text-ol-text dark:text-darkOl-text">{firstName}</p>
+              <p className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+                {user?.role?.toUpperCase() ?? 'USUÁRIO'}
               </p>
             </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="hidden lg:flex items-center gap-2">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white/20 text-white font-semibold'
-                      : 'text-ol-grayLight hover:bg-white/10 hover:text-white'
-                  }`}
-                  title={item.tooltip}
-                >
-                  {item.icon}
-                  <span className="text-sm">{item.name}</span>
-                </Link>
-              )
-            })}
-          </nav>
-
-          {/* User Menu e Actions */}
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
             <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+              onClick={logout}
+              className="rounded-full bg-ol-primary p-2 text-white transition-colors hover:bg-ol-hover dark:bg-darkOl-primary dark:hover:bg-darkOl-hover"
+              title="Sair"
             >
-              {theme === 'light' ? (
-                <Moon className="w-5 h-5" />
-              ) : (
-                <Sun className="w-5 h-5" />
-              )}
+              <User className="h-4 w-4" />
             </button>
-
-            {/* User Profile */}
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold">{firstName}</p>
-                <p className="text-xs text-ol-grayLight dark:text-darkOl-grayLight">
-                  {user?.role || 'Usuário'}
-                </p>
-              </div>
-              <button
-                onClick={logout}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                title="Sair"
-              >
-                <User className="w-5 h-5" />
-              </button>
-            </div>
           </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="lg:hidden pb-4">
-          <nav className="flex items-center gap-2 overflow-x-auto">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white/20 text-white font-semibold'
-                      : 'text-ol-grayLight hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                  <span className="text-sm">{item.name}</span>
-                </Link>
-              )
-            })}
-          </nav>
         </div>
       </div>
+
+      <div className="hidden border-t border-ol-border bg-white px-4 py-3 dark:border-darkOl-border dark:bg-darkOl-cardBg md:block">
+        <nav className="flex items-center gap-2">
+          {navigationItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-ol-primary text-white dark:bg-darkOl-primary'
+                    : 'text-ol-text hover:bg-ol-bg dark:text-darkOl-text dark:hover:bg-darkOl-cardBg'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
+
+      {mobileOpen && (
+        <nav className="border-t border-ol-border bg-white px-4 py-3 dark:border-darkOl-border dark:bg-darkOl-cardBg lg:hidden">
+          <ul className="space-y-1">
+            {navigationItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={clsx(
+                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium',
+                      isActive
+                        ? 'bg-ol-primary text-white dark:bg-darkOl-primary'
+                        : 'text-ol-text hover:bg-ol-bg dark:text-darkOl-text dark:hover:bg-darkOl-cardBg'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+      )}
     </header>
   )
 }

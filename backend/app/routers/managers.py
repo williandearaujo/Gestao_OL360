@@ -23,7 +23,7 @@ async def list_managers(
     current_user: User = Depends(get_current_user)
 ):
     """Lista todos os gestores"""
-    managers = db.query(Manager).filter(Manager.ativo == "ATIVO").all()
+    managers = db.query(Manager).all()
     return managers
 
 
@@ -34,7 +34,7 @@ async def create_manager(
     current_user: User = Depends(get_current_user)
 ):
     """Cria um novo gestor"""
-    if current_user.role not in ["admin", "diretoria"]:
+    if current_user.role not in ["admin", "diretoria", "gerente"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
     
     manager = Manager(**manager_data.model_dump())

@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     is_active: bool = True
+    employee_id: UUID
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -18,11 +19,13 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
+    employee_id: Optional[UUID] = None
 
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
     is_admin: bool
+    employee_id: UUID
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     login_count: int = 0

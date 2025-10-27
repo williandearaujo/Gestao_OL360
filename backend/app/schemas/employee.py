@@ -1,27 +1,41 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import date, datetime
 from app.schemas.area import AreaResponse
 from uuid import UUID
 
+
 class EmployeeBase(BaseModel):
     """Schema base para colaborador"""
-    nome_completo: str = Field(..., min_length=3, max_length=200) # MUDANÇA: de nome para nome_completo
-    email: EmailStr
+    nome_completo: str = Field(..., min_length=3, max_length=200)
+    email_corporativo: EmailStr
+    email_pessoal: Optional[EmailStr] = None
     cargo: str = Field(..., min_length=2, max_length=100)
     cpf: Optional[str] = Field(None, min_length=11, max_length=14)
+    rg: Optional[str] = None
     data_nascimento: Optional[date] = None
-    telefone: Optional[str] = None
+    telefone_pessoal: Optional[str] = None
+    telefone_corporativo: Optional[str] = None
+    endereco_completo: Optional[str] = None
+    contato_emergencia_nome: Optional[str] = None
+    contato_emergencia_telefone: Optional[str] = None
     data_admissao: Optional[date] = None
-    salario: Optional[float] = None
+    senioridade: Optional[str] = None
     status: Optional[str] = Field(default="ATIVO")
-    area_id: Optional[UUID] = None  # 🔗 Relacionamento com Area
+    area_id: Optional[UUID] = None
+    team_id: Optional[UUID] = None
+    manager_id: Optional[UUID] = None
+    data_proximo_pdi: Optional[date] = None
+    data_ultimo_pdi: Optional[date] = None
+    data_proxima_1x1: Optional[date] = None
+    data_ultima_1x1: Optional[date] = None
+    ferias_dados: Optional[Dict[str, Any]] = None
 
     @validator("cpf")
     def validar_cpf(cls, v):
         """Valida o CPF (básico)"""
         if v:
-            cpf = ''.join(filter(str.isdigit, v))
+            cpf = "".join(filter(str.isdigit, v))
             if len(cpf) != 11:
                 raise ValueError("CPF deve ter 11 dígitos numéricos")
             return cpf
@@ -38,13 +52,29 @@ class EmployeeCreate(EmployeeBase):
 
 class EmployeeUpdate(BaseModel):
     """Schema para atualização parcial"""
-    nome_completo: Optional[str] = None # MUDANÇA: de nome para nome_completo
-    email: Optional[EmailStr] = None
+    nome_completo: Optional[str] = None
+    email_corporativo: Optional[EmailStr] = None
+    email_pessoal: Optional[EmailStr] = None
     cargo: Optional[str] = None
-    telefone: Optional[str] = None
-    salario: Optional[float] = None
+    cpf: Optional[str] = None
+    rg: Optional[str] = None
+    data_nascimento: Optional[date] = None
+    telefone_pessoal: Optional[str] = None
+    telefone_corporativo: Optional[str] = None
+    endereco_completo: Optional[str] = None
+    contato_emergencia_nome: Optional[str] = None
+    contato_emergencia_telefone: Optional[str] = None
+    data_admissao: Optional[date] = None
+    senioridade: Optional[str] = None
     status: Optional[str] = None
     area_id: Optional[UUID] = None
+    team_id: Optional[UUID] = None
+    manager_id: Optional[UUID] = None
+    data_proximo_pdi: Optional[date] = None
+    data_ultimo_pdi: Optional[date] = None
+    data_proxima_1x1: Optional[date] = None
+    data_ultima_1x1: Optional[date] = None
+    ferias_dados: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -53,17 +83,32 @@ class EmployeeUpdate(BaseModel):
 class EmployeeResponse(BaseModel):
     """Schema de resposta simplificada"""
     id: UUID
-    nome_completo: str # MUDANÇA: de nome para nome_completo
-    email: EmailStr
+    nome_completo: str
+    email_corporativo: EmailStr
+    email_pessoal: Optional[EmailStr] = None
     cargo: str
     cpf: Optional[str] = None
-    telefone: Optional[str] = None
-    salario: Optional[float] = None
+    rg: Optional[str] = None
+    telefone_pessoal: Optional[str] = None
+    telefone_corporativo: Optional[str] = None
+    senioridade: Optional[str] = None
     status: str
     data_admissao: Optional[date] = None
+    data_nascimento: Optional[date] = None
+    contato_emergencia_nome: Optional[str] = None
+    contato_emergencia_telefone: Optional[str] = None
+    endereco_completo: Optional[str] = None
     area: Optional[AreaResponse] = None
+    area_id: Optional[UUID] = None
+    team_id: Optional[UUID] = None
+    manager_id: Optional[UUID] = None
+    data_proximo_pdi: Optional[date] = None
+    data_ultimo_pdi: Optional[date] = None
+    data_proxima_1x1: Optional[date] = None
+    data_ultima_1x1: Optional[date] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    ferias_dados: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -80,6 +125,7 @@ class EmployeeDetailResponse(EmployeeResponse):
     observacoes: Optional[str] = None
     senioridade: Optional[str] = None
     filhos_qtd: Optional[int] = None
+    ferias_dados: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

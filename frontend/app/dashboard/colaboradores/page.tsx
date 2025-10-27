@@ -1,209 +1,234 @@
-"use client"; // MUDANÇA: Precisa ser Client Component para buscar dados e ter interação
+"use client"
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
-import { Employee } from "@/components/employees/types";
-import { api } from "@/lib/api";
-import { OLButton } from "@/components/ui/OLButton";
-import { OLModal } from "@/components/ui/OLModal";
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { PlusCircle, Edit, Eye, Trash2, Users, Loader2 } from "lucide-react"
+import clsx from "clsx"
+import { getEmployees, deleteEmployee } from "@/lib/api"
+import OLButton from "@/components/ui/OLButton"
+import OLModal from "@/components/ui/OLModal"
 
-// MUDANÇA: Removido MOCK_COLABORADORES
+type EmployeeListItem = {
+  id: string
+  nome_completo: string
+  cargo?: string | null
+  senioridade?: string | null
+  email_corporativo?: string | null
+  status?: string | null
+  area?: { nome?: string | null } | null
+}
+
+interface ModalState {
+  open: boolean
+  title: string
+  description: string
+  confirmLabel?: string
+  onConfirm?: () => Promise<void> | void
+}
 
 export default function ColaboradoresPage() {
-  const router = useRouter();
-  const [colaboradores, setColaboradores] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<{
-    show: boolean;
-    title: string;
-    message: string;
-    onConfirm?: () => void;
-  }>({ show: false, title: "", message: "" });
+  const router = useRouter()
+  const [employees, setEmployees] = useState<EmployeeListItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [modal, setModal] = useState<ModalState>({
+    open: false,
+    title: "",
+    description: "",
+  })
 
-  // MUDANÇA: Busca dados reais da API
+  const loadEmployees = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await getEmployees()
+      setEmployees(data ?? [])
+    } catch (err) {
+      console.error(err)
+      setError("Nao foi possivel carregar os colaboradores. Tente novamente mais tarde.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const fetchColaboradores = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/employees/");
-        setColaboradores(response.data);
-      } catch (error) {
-        console.error("Erro ao buscar colaboradores:", error);
-        setModal({
-          show: true,
-          title: "Erro ao Carregar",
-          message:
-            "Não foi possível buscar a lista de colaboradores. Verifique o backend.",
-          onConfirm: () => setModal({ ...modal, show: false }),
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadEmployees()
+  }, [])
 
-    fetchColaboradores();
-  }, []);
+  const activeCount = useMemo(
+    () => employees.filter((employee) => employee.status?.toUpperCase() === "ATIVO").length,
+    [employees]
+  )
 
-  const handleDelete = (id: string) => {
+  const confirmDelete = (employeeId: string, employeeName: string) => {
     setModal({
-      show: true,
-      title: "Confirmar Exclusão",
-      message: "Tem certeza que deseja excluir este colaborador?",
+      open: true,
+      title: "Remover colaborador",
+      description: `Deseja realmente remover ${employeeName}? Esta acao nao pode ser desfeita.`,
+      confirmLabel: "Remover",
       onConfirm: async () => {
         try {
-          await api.delete(`/employees/${id}`);
-          setColaboradores(colaboradores.filter((c) => c.id !== id));
-          setModal({ show: false, title: "", message: "" });
-        } catch (error) {
-          console.error("Erro ao excluir:", error);
+          await deleteEmployee(employeeId)
           setModal({
-            show: true,
-            title: "Erro",
-            message: "Não foi possível excluir o colaborador.",
-            onConfirm: () => setModal({ ...modal, show: false }),
-          });
+            open: true,
+            title: "Colaborador removido",
+            description: `${employeeName} foi removido com sucesso.`,
+          })
+          setEmployees((prev) => prev.filter((employee) => employee.id !== employeeId))
+        } catch (err) {
+          console.error(err)
+          setModal({
+            open: true,
+            title: "Erro ao remover",
+            description: "Nao foi possivel remover o colaborador. Tente novamente.",
+          })
         }
       },
-    });
-  };
+    })
+  }
+
+  const closeModal = () =>
+    setModal({
+      open: false,
+      title: "",
+      description: "",
+    })
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <OLModal
-        isOpen={modal.show}
-        onClose={() => setModal({ ...modal, show: false })}
+        isOpen={modal.open}
         title={modal.title}
+        onClose={closeModal}
         onConfirm={modal.onConfirm}
-        confirmText={modal.onConfirm ? "Confirmar" : undefined}
+        confirmText={modal.confirmLabel}
       >
-        <p>{modal.message}</p>
+        <p className="text-sm text-ol-text dark:text-darkOl-text">{modal.description}</p>
       </OLModal>
 
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Gerenciamento de Colaboradores
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-ol-text dark:text-darkOl-text">
+            Equipe OL Tecnologia
           </h1>
-          <p className="mt-2 text-gray-600">
-            Adicione, edite ou visualize os colaboradores da OL.
+          <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+            Gerencie colaboradores, cargos e status de forma centralizada.
           </p>
         </div>
-        <Link href="/dashboard/colaboradores/novo" passHref>
-          <OLButton>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Adicionar Colaborador
-          </OLButton>
-        </Link>
+        <OLButton onClick={() => router.push("/dashboard/colaboradores/novo")}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Novo colaborador
+        </OLButton>
       </header>
 
-      {/* MUDANÇA: Tabela de dados reais */}
-      <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Nome
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Cargo
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Email
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Status
-              </th>
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Ações</span>
-              </th>
+      <section className="rounded-xl border border-ol-border bg-white p-4 shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
+        <div className="flex items-center gap-3 text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+          <Users className="h-4 w-4" />
+          <span>
+            {employees.length} colaborador(es) cadastrados - {activeCount} ativos
+          </span>
+        </div>
+      </section>
+
+      <div className="overflow-hidden rounded-xl border border-ol-border bg-white shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
+        <table className="min-w-full divide-y divide-ol-border dark:divide-darkOl-border">
+          <thead className="bg-ol-bg dark:bg-darkOl-bg">
+            <tr className="text-left text-xs font-medium uppercase tracking-wide text-ol-grayMedium dark:text-darkOl-grayMedium">
+              <th className="px-6 py-3">Colaborador</th>
+              <th className="px-6 py-3">Cargo</th>
+              <th className="px-6 py-3">E-mail</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-right">Acoes</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {loading ? (
+          <tbody className="divide-y divide-ol-border bg-white text-sm dark:divide-darkOl-border dark:bg-darkOl-cardBg">
+            {loading && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-gray-500">
-                  Carregando...
+                <td colSpan={5} className="px-6 py-8 text-center text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando colaboradores...
+                  </span>
                 </td>
               </tr>
-            ) : colaboradores.length === 0 ? (
+            )}
+            {!loading && error && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-gray-500">
-                  Nenhum colaborador encontrado.
+                <td colSpan={5} className="px-6 py-8 text-center text-red-600 dark:text-red-300">
+                  {error}
                 </td>
               </tr>
-            ) : (
-              colaboradores.map((colaborador) => (
-                <tr key={colaborador.id}>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="font-medium text-gray-900">
-                      {colaborador.nome_completo}
+            )}
+            {!loading && !error && employees.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Nenhum colaborador cadastrado ate o momento.
+                </td>
+              </tr>
+            )}
+            {!loading &&
+              !error &&
+              employees.map((employee) => (
+                <tr key={employee.id}>
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-ol-text dark:text-darkOl-text">
+                      {employee.nome_completo}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {colaborador.area?.nome || "Sem área"}
+                    <div className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+                      {employee.area?.nome ?? "Sem area definida"}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {colaborador.cargo}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {colaborador.senioridade || "N/A"}
+                  <td className="px-6 py-4 text-ol-text dark:text-darkOl-text">
+                    <div>{employee.cargo ?? "Nao informado"}</div>
+                    <div className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
+                      {employee.senioridade ?? "Nao informado"}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                    {colaborador.email}
+                  <td className="px-6 py-4 text-ol-text dark:text-darkOl-text">
+                    {employee.email_corporativo ?? "Nao informado"}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="px-6 py-4">
                     <span
-                      className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                        colaborador.status === "ATIVO"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={clsx(
+                        "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold uppercase",
+                        employee.status?.toUpperCase() === "ATIVO"
+                          ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-200"
+                          : employee.status?.toUpperCase() === "FERIAS"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-200"
+                      )}
                     >
-                      {colaborador.status}
+                      {employee.status ?? "Indefinido"}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                  <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() =>
-                        router.push(
-                          `/dashboard/colaboradores/${colaborador.id}/editar`
-                        )
-                      }
-                      className="text-ol-primary hover:text-ol-hover"
-                      title="Editar"
+                      className="rounded-md px-2 py-1 text-ol-primary transition hover:bg-ol-bg dark:text-darkOl-primary dark:hover:bg-darkOl-cardBg"
+                      onClick={() => router.push(`/dashboard/colaboradores/${employee.id}`)}
+                      title="Ver detalhes"
                     >
-                      <Edit className="h-5 w-5" />
+                      <Eye className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(colaborador.id)}
-                      className="ml-4 text-red-600 hover:text-red-900"
-                      title="Excluir"
+                      className="ml-2 rounded-md px-2 py-1 text-ol-primary transition hover:bg-ol-bg dark:text-darkOl-primary dark:hover:bg-darkOl-cardBg"
+                      onClick={() => router.push(`/dashboard/colaboradores/${employee.id}/editar`)}
+                      title="Editar colaborador"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      className="ml-2 rounded-md px-2 py-1 text-red-600 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+                      onClick={() => confirmDelete(employee.id, employee.nome_completo)}
+                      title="Excluir colaborador"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
           </tbody>
         </table>
       </div>
     </div>
-  );
+  )
 }

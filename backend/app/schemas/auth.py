@@ -61,9 +61,15 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     password: Optional[str] = None
 
+from uuid import UUID
+
+
 class UserResponse(UserBase):
-    id: int
-    created_at: datetime
+    id: UUID
+    employee_id: Optional[UUID] = None
+    is_admin: bool = False
+    login_count: int = 0
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
 

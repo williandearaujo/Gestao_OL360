@@ -2,46 +2,35 @@
 
 import './globals.css'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
+import { ReactNode } from 'react'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
+import AppShell from '@/components/layout/AppShell'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+function LayoutContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const isLogin = pathname === '/login'
+  const isAuthRoute = pathname === '/login' || pathname === '/'
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  if (isAuthRoute) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-ol-bg text-ol-text dark:bg-darkOl-bg dark:text-darkOl-text">
+        {children}
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme && savedTheme !== theme) {
-      setTheme(savedTheme)
-    } else if (!savedTheme) {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      setTheme(systemPrefersDark ? 'dark' : 'light')
-    }
-  }, []) // roda uma única vez no mount
+  return <AppShell>{children}</AppShell>
+}
 
-  useEffect(() => {
-    // Sincroniza localStorage ao alterar o tema
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className={theme === 'dark' ? 'dark' : ''}>
-      <body className="min-h-screen flex flex-col bg-ol-bg text-ol-text dark:bg-darkOl-bg dark:text-darkOl-text relative pb-16">
-        <AuthProvider>
-          {!isLogin && <Header theme={theme} setTheme={setTheme} />}
-          <main
-            className={`flex-grow ${
-              isLogin ? 'flex items-center justify-center px-4 md:px-0' : 'p-6'
-            }`}
-          >
-            {children}
-          </main>
-          <Footer theme={theme} className="fixed bottom-0 left-0 w-full z-50" />
-        </AuthProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className="min-h-screen bg-ol-bg text-ol-text antialiased dark:bg-darkOl-bg dark:text-darkOl-text">
+        <ThemeProvider>
+          <AuthProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

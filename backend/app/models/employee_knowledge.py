@@ -36,7 +36,7 @@ class EmployeeKnowledge(Base):
     observacoes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    employee = relationship("Employee", back_populates="conhecimentos")
+    employee = relationship("Employee", back_populates="knowledges")
     knowledge = relationship("Knowledge", back_populates="vinculos")
 
     def to_dict(self):

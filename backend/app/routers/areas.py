@@ -23,7 +23,7 @@ async def list_areas(
     current_user: User = Depends(get_current_user)
 ):
     """Lista todas as áreas"""
-    areas = db.query(Area).filter(Area.ativa == True).all()
+    areas = db.query(Area).all()
     return areas
 
 
@@ -34,7 +34,7 @@ async def create_area(
     current_user: User = Depends(get_current_user)
 ):
     """Cria uma nova área"""
-    if current_user.role not in ["admin", "diretoria"]:
+    if current_user.role not in ["admin", "diretoria", "gerente"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
     
     area = Area(**area_data.model_dump())

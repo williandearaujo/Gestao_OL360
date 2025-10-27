@@ -1,252 +1,264 @@
 """
-Script para popular o banco de dados com dados de teste
-Execute: python seed_data.py
+Script para popular o banco de dados com dados iniciais (Admin) e de teste.
+Executar da pasta 'backend': python seed_data.py
 """
-import requests
-import json
+import sys
+import os
 from datetime import date, timedelta
+from sqlalchemy.orm import Session
+import uuid
 
-API_URL = "http://localhost:8000"
+# Adiciona o diretório 'backend' ao path para permitir imports de 'app'
+# Isso é necessário se você rodar 'python seed_data.py' de dentro da pasta 'backend'
+# sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-
-# Login como admin
-def login_admin():
-    response = requests.post(
-        f"{API_URL}/auth/login",
-        json={"username": "admin@ol360.com", "password": "Admin@123456"}
-    )
-    if response.status_code == 200:
-        data = response.json()
-        return data["access_token"]
-    else:
-        print(f"❌ Erro no login: {response.text}")
-        return None
-
-
-# Criar colaboradores de exemplo
-def criar_colaboradores(token):
-    headers = {"Authorization": f"Bearer {token}"}
-
-    colaboradores = [
-        {
-            "nome_completo": "João Silva",
-            "cpf": "12345678901",
-            "rg": "MG1234567",
-            "data_nascimento": "1990-05-15",
-            "estado_civil": "Casado",
-            "email_pessoal": "joao.silva@gmail.com",
-            "email_corporativo": "joao.silva@ol360.com",
-            "telefone_pessoal": "(31) 98765-4321",
-            "telefone_corporativo": "(31) 3333-1111",
-            "endereco": "Rua das Flores, 123 - Belo Horizonte/MG",
-            "cargo": "Desenvolvedor Full Stack",
-            "departamento": "Tecnologia",
-            "data_admissao": "2022-01-10",
-            "salario": 8000.00,
-            "status": "ATIVO"
-        },
-        {
-            "nome_completo": "Maria Santos",
-            "cpf": "98765432101",
-            "rg": "SP9876543",
-            "data_nascimento": "1988-08-20",
-            "estado_civil": "Solteira",
-            "email_pessoal": "maria.santos@gmail.com",
-            "email_corporativo": "maria.santos@ol360.com",
-            "telefone_pessoal": "(11) 99876-5432",
-            "telefone_corporativo": "(11) 3333-2222",
-            "endereco": "Av. Paulista, 1000 - São Paulo/SP",
-            "cargo": "Gerente de Projetos",
-            "departamento": "Gestão",
-            "data_admissao": "2020-03-15",
-            "salario": 12000.00,
-            "status": "ATIVO"
-        },
-        {
-            "nome_completo": "Pedro Oliveira",
-            "cpf": "45678912301",
-            "rg": "RJ4567891",
-            "data_nascimento": "1995-12-03",
-            "estado_civil": "Solteiro",
-            "email_pessoal": "pedro.oliveira@gmail.com",
-            "email_corporativo": "pedro.oliveira@ol360.com",
-            "telefone_pessoal": "(21) 98888-7777",
-            "telefone_corporativo": "(21) 3333-3333",
-            "endereco": "Rua do Comércio, 456 - Rio de Janeiro/RJ",
-            "cargo": "Analista de Suporte",
-            "departamento": "TI",
-            "data_admissao": "2023-06-01",
-            "salario": 5000.00,
-            "status": "ATIVO"
-        }
-    ]
-
-    ids_criados = []
-    for colab in colaboradores:
-        try:
-            response = requests.post(
-                f"{API_URL}/employees",
-                headers=headers,
-                json=colab
-            )
-            if response.status_code in [200, 201]:
-                data = response.json()
-                print(f"✅ Colaborador criado: {colab['nome_completo']}")
-                ids_criados.append(data.get('id'))
-            else:
-                print(f"❌ Erro ao criar {colab['nome_completo']}: {response.text}")
-        except Exception as e:
-            print(f"❌ Exceção ao criar {colab['nome_completo']}: {e}")
-
-    return ids_criados
+try:
+    from app.database import SessionLocal, engine, Base
+    from app.models.user import User
+    from app.models.employee import Employee
+    from app.models.team import Team
+    from app.models.area import Area
+    from app.models.manager import Manager
+    from app.models.knowledge import Knowledge
+    from app.models.employee_knowledge import EmployeeKnowledge, StatusEnum
+    from app.core.security import hash_password
+except ImportError as e:
+    print("[ERRO] Falha ao importar módulos:", e)
+    print("       Certifique-se de que o venv está ativo e as dependências instaladas.")
+    sys.exit(1)
 
 
-# Criar conhecimentos
-def criar_conhecimentos(token):
-    headers = {"Authorization": f"Bearer {token}"}
 
-    conhecimentos = [
-        {
-            "nome": "Python Avançado",
-            "descricao": "Programação Python para desenvolvimento de aplicações complexas",
-            "tipo": "TECNICO",
-            "nivel_minimo": "INTERMEDIARIO",
-            "categoria": "Programação",
-            "carga_horaria": 40,
-            "validade_meses": 24
-        },
-        {
-            "nome": "AWS Solutions Architect",
-            "descricao": "Certificação AWS para arquitetura de soluções em nuvem",
-            "tipo": "CERTIFICACAO",
-            "nivel_minimo": "AVANCADO",
-            "categoria": "Cloud Computing",
-            "carga_horaria": 80,
-            "validade_meses": 36
-        },
-        {
-            "nome": "Scrum Master Certified",
-            "descricao": "Certificação em metodologias ágeis Scrum",
-            "tipo": "METODOLOGIA",
-            "nivel_minimo": "INTERMEDIARIO",
-            "categoria": "Gestão de Projetos",
-            "carga_horaria": 16,
-            "validade_meses": 24
-        },
-        {
-            "nome": "Liderança e Gestão de Equipes",
-            "descricao": "Desenvolvimento de habilidades de liderança",
-            "tipo": "COMPORTAMENTAL",
-            "nivel_minimo": "BASICO",
-            "categoria": "Soft Skills",
-            "carga_horaria": 24,
-            "validade_meses": 0  # Não expira
-        }
-    ]
-
-    ids_criados = []
-    for conhec in conhecimentos:
-        try:
-            response = requests.post(
-                f"{API_URL}/knowledge",
-                headers=headers,
-                json=conhec
-            )
-            if response.status_code in [200, 201]:
-                data = response.json()
-                print(f"✅ Conhecimento criado: {conhec['nome']}")
-                ids_criados.append(data.get('id'))
-            else:
-                print(f"❌ Erro ao criar {conhec['nome']}: {response.text}")
-        except Exception as e:
-            print(f"❌ Exceção ao criar {conhec['nome']}: {e}")
-
-    return ids_criados
+def create_tables():
+    """Cria todas as tabelas no banco de dados."""
+    print("Apagando tabelas antigas (se existirem)...")
+    Base.metadata.drop_all(bind=engine)
+    print("Criando todas as tabelas novas...")
+    Base.metadata.create_all(bind=engine)
+    print("[OK] Tabelas criadas com sucesso.")
 
 
-# Criar vínculos (employee_knowledge)
-def criar_vinculos(token, employee_ids, knowledge_ids):
-    if not employee_ids or not knowledge_ids:
-        print("⚠️ Sem IDs de colaboradores ou conhecimentos para vincular")
-        return
+def seed_data(db: Session):
+    """Popula o banco com dados iniciais e de teste."""
+    print("\nIniciando o seed dos dados...")
+    
+    try:
+        # 1. Criar Áreas
+        area_diretoria = Area(nome="Diretoria", descricao="Área da Diretoria Executiva")
+        area_ti = Area(nome="TI", descricao="Área de Tecnologia da Informação")
+        db.add_all([area_diretoria, area_ti])
+        db.commit()
+        db.refresh(area_diretoria)
+        db.refresh(area_ti)
+        print("[OK] Áreas 'Diretoria' e 'TI' criadas.")
 
-    headers = {"Authorization": f"Bearer {token}"}
+        # 2. Criar Times
+        team_diretoria = Team(nome="Diretoria", descricao="Time da Diretoria Executiva", area_id=area_diretoria.id, ativa=True)
+        team_dev = Team(nome="Desenvolvimento", descricao="Time de Desenvolvimento de Software", area_id=area_ti.id, ativa=True)
+        db.add_all([team_diretoria, team_dev])
+        db.commit()
+        db.refresh(team_diretoria)
+        db.refresh(team_dev)
+        print("[OK] Times 'Diretoria' e 'Desenvolvimento' criados.")
 
-    # João Silva - Python Avançado
-    if len(employee_ids) > 0 and len(knowledge_ids) > 0:
-        vinculos = [
-            {
-                "employee_id": employee_ids[0],
-                "knowledge_id": knowledge_ids[0],
-                "nivel_obtido": "AVANCADO",
-                "data_obtencao": (date.today() - timedelta(days=180)).isoformat(),
-                "data_validade": (date.today() + timedelta(days=550)).isoformat(),
-                "status": "ATIVO"
-            },
-            # Maria Santos - Scrum Master
-            {
-                "employee_id": employee_ids[1] if len(employee_ids) > 1 else employee_ids[0],
-                "knowledge_id": knowledge_ids[2] if len(knowledge_ids) > 2 else knowledge_ids[0],
-                "nivel_obtido": "ESPECIALISTA",
-                "data_obtencao": (date.today() - timedelta(days=365)).isoformat(),
-                "data_validade": (date.today() + timedelta(days=365)).isoformat(),
-                "status": "ATIVO"
-            }
-        ]
+        # 3. Criar Colaborador Admin (Willian de Araujo)
+        admin_employee = Employee(
+            nome_completo="Willian de Araujo",
+            email_pessoal="willian.araujo@emailpessoal.com", # Fictício
+            email_corporativo="diretoria@ol360.com",
+            telefone_pessoal="11999998888", # Fictício
+            data_nascimento=date(1990, 1, 1), # Fictício
+            cpf="000.000.000-00", # Fictício
+            data_admissao=date(2020, 1, 1),
+            cargo="Diretor de TI",
+            senioridade="Especialista",
+            status="ATIVO",
+            area_id=area_diretoria.id,
+            team_id=team_diretoria.id
+        )
+        db.add(admin_employee)
+        db.commit()
+        db.refresh(admin_employee)
+        print(f"[OK] Colaborador Admin '{admin_employee.nome_completo}' criado.")
 
-        for vinculo in vinculos:
-            try:
-                response = requests.post(
-                    f"{API_URL}/employee-knowledge",
-                    headers=headers,
-                    json=vinculo
-                )
-                if response.status_code in [200, 201]:
-                    print(f"✅ Vínculo criado: Employee {vinculo['employee_id']} - Knowledge {vinculo['knowledge_id']}")
-                else:
-                    print(f"❌ Erro ao criar vínculo: {response.text}")
-            except Exception as e:
-                print(f"❌ Exceção ao criar vínculo: {e}")
+        # 4. Criar Usuário Admin (com senha)
+        hashed_password = hash_password("123@mudar")
+        admin_user = User(
+            username="willian.araujo",
+            email="diretoria@ol360.com",
+            hashed_password=hashed_password,
+            role="diretoria",  # Permissão máxima
+            is_active=True,
+            is_admin=True,
+            employee_id=admin_employee.id  # Vínculo com o colaborador
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+        print(f"[OK] Usuário Admin '{admin_user.email}' criado com permissão 'diretoria'.")
+
+        # 5. Criar Perfil de Manager para o Admin
+        admin_manager = Manager(
+            employee_id=admin_employee.id,
+        )
+        db.add(admin_manager)
+        db.commit()
+        db.refresh(admin_manager)
+        print(f"[OK] Perfil de Manager criado para '{admin_employee.nome_completo}'.")
+        
+        # 6. Criar outros colaboradores (João, Maria, Pedro)
+        joao_employee = Employee(
+            nome_completo="João Silva",
+            email_pessoal="joao.silva@gmail.com",
+            email_corporativo="joao.silva@ol360.com",
+            telefone_pessoal="(31) 98765-4321",
+            data_nascimento=date(1990, 5, 15),
+            cpf="123.456.789-01",
+            data_admissao=date(2022, 1, 10),
+            cargo="Desenvolvedor Full Stack",
+            senioridade="Pleno",
+            status="ATIVO",
+            area_id=area_ti.id,
+            team_id=team_dev.id,
+            manager_id=admin_manager.id # João é gerenciado pelo Willian
+        )
+
+        maria_employee = Employee(
+            nome_completo="Maria Santos",
+            email_pessoal="maria.santos@gmail.com",
+            email_corporativo="maria.santos@ol360.com",
+            telefone_pessoal="(11) 99876-5432",
+            data_nascimento=date(1988, 8, 20),
+            cpf="987.654.321-01",
+            data_admissao=date(2020, 3, 15),
+            cargo="Gerente de Projetos",
+            senioridade="Senior",
+            status="ATIVO",
+            area_id=area_ti.id,
+            team_id=team_dev.id,
+            manager_id=admin_manager.id # Maria é gerenciada pelo Willian
+        )
+
+        pedro_employee = Employee(
+            nome_completo="Pedro Oliveira",
+            email_pessoal="pedro.oliveira@gmail.com",
+            email_corporativo="pedro.oliveira@ol360.com",
+            telefone_pessoal="(21) 98888-7777",
+            data_nascimento=date(1995, 12, 3),
+            cpf="456.789.123-01",
+            data_admissao=date(2023, 6, 1),
+            cargo="Analista de Suporte",
+            senioridade="Junior",
+            status="ATIVO",
+            area_id=area_ti.id,
+            team_id=team_dev.id,
+            manager_id=admin_manager.id # Pedro é gerenciado pelo Willian
+        )
+        db.add_all([joao_employee, maria_employee, pedro_employee])
+        db.commit()
+        db.refresh(joao_employee)
+        db.refresh(maria_employee)
+        db.refresh(pedro_employee)
+        print("[OK] Colaboradores de teste (João, Maria, Pedro) criados.")
+
+        # 7. Criar Conhecimentos
+        k_python = Knowledge(
+            nome="Python Avançado",
+            tipo="CERTIFICACAO",
+            fornecedor="Alura",
+            dificuldade="ALTO",
+            prioridade="ALTA",
+            status="ATIVO",
+        )
+        k_aws = Knowledge(
+            nome="AWS Solutions Architect",
+            tipo="CERTIFICACAO",
+            fornecedor="AWS",
+            dificuldade="ALTO",
+            prioridade="ALTA",
+            status="ATIVO",
+            validade_meses=36,
+        )
+        k_scrum = Knowledge(
+            nome="Scrum Master Certified",
+            tipo="CURSO",
+            fornecedor="Scrum.org",
+            dificuldade="MEDIO",
+            prioridade="MEDIA",
+            status="ATIVO",
+            validade_meses=24,
+        )
+        k_lider = Knowledge(
+            nome="Liderança e Gestão",
+            tipo="CURSO",
+            fornecedor="Sebrae",
+            dificuldade="MEDIO",
+            prioridade="MEDIA",
+            status="ATIVO",
+        )
+
+        db.add_all([k_python, k_aws, k_scrum, k_lider])
+        db.commit()
+        db.refresh(k_python)
+        db.refresh(k_aws)
+        db.refresh(k_scrum)
+        db.refresh(k_lider)
+        print("[OK] Conhecimentos criados.")
+
+        # 8. Criar Vínculos (EmployeeKnowledge)
+        v_joao_python = EmployeeKnowledge(
+            employee_id=joao_employee.id,
+            knowledge_id=k_python.id,
+            status=StatusEnum.OBTIDO,
+            data_obtencao=date(2023, 1, 1)
+        )
+        v_maria_scrum = EmployeeKnowledge(
+            employee_id=maria_employee.id,
+            knowledge_id=k_scrum.id,
+            status=StatusEnum.OBTIDO,
+            data_obtencao=date(2022, 5, 10)
+        )
+        v_maria_lider = EmployeeKnowledge(
+            employee_id=maria_employee.id,
+            knowledge_id=k_lider.id,
+            status=StatusEnum.DESEJADO
+        )
+        v_pedro_aws = EmployeeKnowledge(
+            employee_id=pedro_employee.id,
+            knowledge_id=k_aws.id,
+            status=StatusEnum.OBRIGATORIO,
+            data_limite=date.today() + timedelta(days=90)
+        )
+        
+        db.add_all([v_joao_python, v_maria_scrum, v_maria_lider, v_pedro_aws])
+        db.commit()
+        print("[OK] Vínculos de conhecimento criados.")
+
+        print("\n" + "=" * 60)
+        print("*** SEED DATA CONCLUÍDO! ***")
+        print("=" * 60)
+        print("\n[INFO] Seu usuário admin está pronto:")
+        print(f"   Email: {admin_user.email}")
+        print(f"   Senha: 123@mudar")
+
+    except Exception as e:
+        print(f"\n[ERRO] Ocorreu um erro durante o seed: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 def main():
     print("=" * 60)
-    print("🌱 SEED DATA - Populando banco com dados de teste")
+    print("SEED SCRIPT - INICIALIZAÇÃO DO BANCO DE DADOS")
     print("=" * 60)
-
-    # 1. Login
-    print("\n1️⃣ Fazendo login como admin...")
-    token = login_admin()
-    if not token:
-        print("❌ Falha no login. Encerrando.")
-        return
-    print(f"✅ Login realizado! Token: {token[:20]}...")
-
-    # 2. Criar colaboradores
-    print("\n2️⃣ Criando colaboradores...")
-    employee_ids = criar_colaboradores(token)
-    print(f"✅ {len(employee_ids)} colaboradores criados")
-
-    # 3. Criar conhecimentos
-    print("\n3️⃣ Criando conhecimentos...")
-    knowledge_ids = criar_conhecimentos(token)
-    print(f"✅ {len(knowledge_ids)} conhecimentos criados")
-
-    # 4. Criar vínculos
-    print("\n4️⃣ Criando vínculos...")
-    criar_vinculos(token, employee_ids, knowledge_ids)
-
-    print("\n" + "=" * 60)
-    print("🎉 SEED DATA CONCLUÍDO!")
-    print("=" * 60)
-    print("\n📊 Resumo:")
-    print(f"   • Colaboradores: {len(employee_ids)}")
-    print(f"   • Conhecimentos: {len(knowledge_ids)}")
-    print("\n🔗 Acesse:")
-    print(f"   • Colaboradores: {API_URL}/employees")
-    print(f"   • Conhecimentos: {API_URL}/knowledge")
-    print(f"   • Vínculos: {API_URL}/employee-knowledge")
-    print(f"   • Docs: {API_URL}/docs")
+    
+    # 1. Criar tabelas
+    create_tables()
+    
+    # 2. Popular dados
+    db = SessionLocal()
+    seed_data(db)
 
 
 if __name__ == "__main__":

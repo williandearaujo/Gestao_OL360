@@ -1,15 +1,16 @@
 'use client'
 
-type HeaderProps = {
-  theme: 'light' | 'dark'
-  setTheme: (theme: 'light' | 'dark') => void
+import clsx from 'clsx'
+
+export default function Footer({ className = '' }: { className?: string }) {
+  return (
+    <footer
+      className={clsx(
+        'border-t border-ol-border bg-white p-4 text-center text-xs text-ol-grayMedium dark:border-darkOl-border dark:bg-darkOl-cardBg dark:text-darkOl-grayMedium',
+        className
+      )}
+    >
+      &copy; {new Date().getFullYear()} OL Gestao 360
+    </footer>
+  )
 }
-
-
-const Footer = ({ className = '' }: { className?: string }) => (
-  <footer className={`${className} bg-white border-t border-[#cccccc] p-4 shadow-inner text-center text-sm text-gray-500`}>
-    © {new Date().getFullYear()} OL Gestão 360 - Sistema Online
-  </footer>
-)
-
-export default Footer

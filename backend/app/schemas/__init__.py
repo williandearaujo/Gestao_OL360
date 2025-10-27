@@ -100,6 +100,24 @@ from .area import (
     AreaResponse,
 )
 
+from .agenda import (
+    DayOffStatus,
+    EmployeeDayOffBase,
+    EmployeeDayOffCreate,
+    EmployeeDayOffUpdate,
+    EmployeeDayOffResponse,
+    OneOnOneStatus,
+    EmployeeOneOnOneBase,
+    EmployeeOneOnOneCreate,
+    EmployeeOneOnOneUpdate,
+    EmployeeOneOnOneResponse,
+    PdiStatus,
+    EmployeePdiBase,
+    EmployeePdiCreate,
+    EmployeePdiUpdate,
+    EmployeePdiResponse,
+)
+
 # MUDANÇA: Removido Vacation
 # from app.schemas.vacation import (
 #     VacationPeriod,
@@ -107,4 +125,3 @@ from .area import (
 #     VacationUpdate,
 #     VacationResponse,
 # )
-

@@ -10,8 +10,16 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.models.base import Base
-# Importar Team para referência explícita no foreign_keys
-from app.models.team import Team
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.team import Team
+    from app.models.manager import Manager
+    from app.models.user import User
+    from app.models.employee_knowledge import EmployeeKnowledge
+    from app.models.day_off import EmployeeDayOff
+    from app.models.one_on_one import EmployeeOneOnOne
+    from app.models.pdi_log import EmployeePdiLog
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -59,13 +67,22 @@ class Employee(Base):
     manager = relationship("Manager", back_populates="employees", foreign_keys=[manager_id]) # Ligação para o gestor
 
     # Relacionamento reverso para Manager (quando este Employee é um Manager)
-    manager_profile = relationship("Manager", back_populates="employee", uselist=False, cascade="all, delete-orphan") # Perfil de gestor DESTE funcionário
+    manager_profile = relationship(
+        "Manager",
+        back_populates="employee",
+        uselist=False,
+        cascade="all, delete-orphan",
+        foreign_keys="Manager.employee_id"
+    )
 
     # Relacionamento com User
     user = relationship("User", back_populates="employee", uselist=False, cascade="all, delete-orphan")
 
     # Relacionamento com EmployeeKnowledge
     knowledges = relationship("EmployeeKnowledge", back_populates="employee", cascade="all, delete-orphan")
+    day_offs = relationship("EmployeeDayOff", back_populates="employee", cascade="all, delete-orphan")
+    one_on_ones = relationship("EmployeeOneOnOne", back_populates="employee", cascade="all, delete-orphan")
+    pdi_logs = relationship("EmployeePdiLog", back_populates="employee", cascade="all, delete-orphan")
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
