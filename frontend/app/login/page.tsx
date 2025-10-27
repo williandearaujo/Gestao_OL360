@@ -22,18 +22,31 @@ export default function LoginPage() {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       setTheme(prefersDark ? 'dark' : 'light')
     }
+    // Debug: show API url env variable
+    console.log('API URL:', process.env.NEXTPUBLICAPIURL)
   }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
     setLoading(true)
+    console.log("Tentando login com:", email, password)  // Log de entrada
+
     try {
       const data = await login(email, password)
+      console.log("Resposta login:", data)  // Log da resposta
+
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('user', JSON.stringify(data.user))
+
+      console.log("Token armazenado:", localStorage.getItem('token'))  // Verifica token
+      console.log("Usuário armazenado:", localStorage.getItem('user'))  // Verifica usuário
+
+      console.log("Redirecionando para dashboard")
       router.push('/dashboard')
+
     } catch (err: any) {
+      console.error("Erro no login:", err)  // Log detalhado do erro
       setError(err.message || 'Erro ao fazer login')
     } finally {
       setLoading(false)
@@ -44,7 +57,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex flex-col justify-center p-4">
       <div className="flex-grow flex items-center justify-center">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 animate-fadeIn">
-          {/* Imagem que muda conforme o tema */}
           <img
             src={theme === 'dark' ? '/images/lg_t_dark.png' : '/images/lg_t_white.png'}
             alt="Logo OL Tema"
@@ -131,7 +143,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }

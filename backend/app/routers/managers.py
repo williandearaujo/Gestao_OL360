@@ -34,7 +34,7 @@ async def create_manager(
     current_user: User = Depends(get_current_user)
 ):
     """Cria um novo gestor"""
-    if current_user.role not in ["ADMIN", "DIRETORIA"]:
+    if current_user.role not in ["admin", "diretoria"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
     
     manager = Manager(**manager_data.model_dump())

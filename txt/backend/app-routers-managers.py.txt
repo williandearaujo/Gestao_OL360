@@ -1,0 +1,45 @@
+# ===========================================================================
+# Arquivo backendapproutersmanagers.py
+# ===========================================================================
+
+Router de Gestores
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.database import get_db
+from app.models.user import User
+from app.models.manager import Manager
+from app.core.security import get_current_user
+from app.schemas.organization import ManagerCreate, ManagerResponse
+
+router = APIRouter(prefix=managers, tags=[Gestores])
+
+
+@router.get(, response_model=List[ManagerResponse])
+async def list_managers(
+    db Session = Depends(get_db),
+    current_user User = Depends(get_current_user)
+)
+    Lista todos os gestores
+    managers = db.query(Manager).filter(Manager.ativo == ATIVO).all()
+    return managers
+
+
+@router.post(, response_model=ManagerResponse, status_code=status.HTTP_201_CREATED)
+async def create_manager(
+    manager_data ManagerCreate,
+    db Session = Depends(get_db),
+    current_user User = Depends(get_current_user)
+)
+    Cria um novo gestor
+    if current_user.role not in [admin, diretoria]
+        raise HTTPException(status_code=403, detail=Sem permissão)
+    
+    manager = Manager(manager_data.model_dump())
+    db.add(manager)
+    db.commit()
+    db.refresh(manager)
+    
+    return manager

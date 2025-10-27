@@ -1,0 +1,94 @@
+from .auth import (
+    BaseSchema,
+    RoleEnum,
+    Token,
+    TokenData,
+    LoginRequest,
+    UserBase,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+    Permission,
+    PermissionCreate,
+    Role,
+    RoleCreate,
+    UserSession,
+    PasswordChange,
+    PasswordResetRequest,
+    PasswordReset,
+)
+
+from .employee import (
+    EmployeeBase,
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeResponse,
+    EmployeeListResponse,
+    EmployeeDetailResponse,
+    EmployeeStats,
+    EmployeeVacation,
+    EmployeePDI,
+)
+
+from .employee_knowledge import (
+    EmployeeKnowledgeBase,
+    EmployeeKnowledgeCreate,
+    EmployeeKnowledgeUpdate,
+    EmployeeKnowledgeResponse,
+    EmployeeKnowledgeDetail,
+    EmployeeKnowledgeStats,
+)
+
+from .knowledge import (
+    KnowledgeTypeEnum,
+    KnowledgeLevelEnum,
+    KnowledgeStatusEnum,
+    KnowledgeBase,
+    KnowledgeCreate,
+    KnowledgeUpdate,
+    KnowledgeResponse,
+    KnowledgeDetail,
+    KnowledgeStats,
+    KnowledgeFilter,
+    EmployeeKnowledgeFilter,
+    LearningPath,
+    CertificationAlert,
+)
+
+from .organization import (
+    AreaBase,
+    AreaCreate,
+    AreaUpdate,
+    AreaResponse,
+    AreaDetail,
+    TeamBase,
+    TeamCreate,
+    TeamUpdate,
+    TeamResponse,
+    TeamDetail,
+    DepartmentBase,
+    DepartmentCreate,
+    DepartmentUpdate,
+    DepartmentResponse,
+    OrganizationalLevel,
+    HierarchyNode,
+    OrganizationChart,
+    AreaStatistics,
+    OrganizationStatistics,
+    ManagerCreate,
+    ManagerResponse,
+)
+
+# Caso futuramente queira incluir esses módulos
+#from .pdi import (
+#    # Adicione os schemas PDI aqui
+#)
+
+#from .one_to_one import (
+#    # Adicione os schemas One to One aqui
+#)
+from .area import (
+    AreaBase,
+    AreaCreate,
+    AreaResponse,
+)

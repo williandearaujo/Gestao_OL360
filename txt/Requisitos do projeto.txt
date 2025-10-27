@@ -1,0 +1,234 @@
+Visão & Arquitetura
+
+Stack: Python (FastAPI) + JWT + RBAC; React + Tailwind + shadcn/ui; Postgress via supabase
+
+Módulos: Colaboradores, Certificações/Cursos, Agenda, Férias, Alertas, Clientes/Visitas, Relatórios, Admin/Acessos.
+
+Princípios: auditoria completa, controle de acesso por campo, regras de negócio configuráveis, exportáveis (CSV/PDF), LGPD-by-design.
+
+Modelo de Dados (essencial)
+
+Pessoas & Estruturas
+
+User (login, e-mail, nome, role: DIRETORIA, GERENTE, COLABORADOR, ADMIN-GESTAO)
+
+Team (nome, cor, gerente_id)
+
+Employee (FK User; RG, CPF, nascimento, filhos_qtd, telefones, e-mails, cargo, senioridade, área, gerente_id, team_id)
+
+SalaryHistory (employee_id, valor, vigência, observação)
+
+StudyReimbursement (employee_id, data, valor, descrição, link_comprovante)
+
+Desenvolvimento & Rotinas
+
+PDI (employee_id, tipo: último/atual/agendado, data, anexo/opcional, histórico)
+
+OneToOne (employee_id, último/atual/próximo, data, notas, histórico)
+
+BirthdayDayOff (employee_id, data_aprovada)
+
+VacationPeriod (employee_id, data_inicio, data_fim, dias_vendidos, status: solicitado/aprovado/negado, referência_aquisitiva)
+
+Observa regras CLT: até 3 períodos (>=14d um deles; demais >=5d), máx. 10 dias vendidos por ciclo, controle 2 férias vencidas.
+
+Certificações & Cursos
+
+LearningItem (tipo: certificação|curso, nome, vendor, código, link, validade_meses? opcional)
+
+EmployeeLearning (employee_id, learning_item_id, vínculo: DESEJADO|OBRIGATÓRIO|OBTIDO;
+datas: alvo_obtenção, obtenção, expiração; anexo_certificado)
+
+Clientes & Visitas
+
+Client (fantasia, razão_social, account_manager, contato_resp, classificação: DIAMANTE|OURO|PRATA|BRONZE)
+
+ClientVisit (client_id, última, atual, próxima)
+
+Agenda & Alertas
+
+CalendarItem (tipo: PDI, OneToOne, DayOff, Férias, Visita; employee_id/team_id/client_id; datas)
+
+Alert (escopo: employee|team|client|global; código, severidade, mensagem, referência_id, data_geração, status)
+
+Suporte
+
+Attachment (entidade, entidade_id, arquivo_path)
+
+AuditLog (quem, o que, antes/depois, quando, IP)
+
+Regras de Negócio & Alertas (nomes claros)
+
+PDI (intervalo alvo ≤ 4 meses)
+
+PDI_NUNCA_AGENDADO – sem data em “agendado” e nenhum histórico.
+
+PDI_NAO_REALIZADO – “atual” vazio após data prevista.
+
+PDI_FORA_INTERVALO – diferença entre último e atual > 4 meses.
+
+PDI_PROX_FUTURO_LONGE – próximo agendado > 4 meses do atual.
+
+1:1 (sugestão: frequência padrão 30 dias, configurável)
+
+O2O_NUNCA_AGENDADO, O2O_ATRASADO_>30D, O2O_PROX_CONFLITO_EQUIPE (se chocar com férias ou vários day-offs na mesma semana).
+
+Day Off de Aniversário
+
+Validação: só aceita data no mês do aniversário → senão, popup “DAYOFF_FORA_DO_MES”.
+
+DAYOFF_30D_SEM_AGENDAMENTO – 30 dias antes do aniversário e sem day off marcado.
+
+DAYOFF_CONFLITO_EQUIPE – múltiplos na mesma semana dentro da equipe (confirmação dupla).
+
+Férias (CLT)
+
+FERIAS_VENCENDO – ciclo aquisitivo prestes a expirar.
+
+FERIAS_VENCIDAS e FERIAS_DUPLA_VENCIDA – 1 ou 2 ciclos vencidos.
+
+FERIAS_FRACIONAMENTO_INVALIDO – quebras fora das regras (>=14 + >=5 + >=5).
+
+FERIAS_VENDA_EXCEDIDA – >10 dias vendidos no ciclo.
+
+FERIAS_CONFLITO_EQUIPE – sobreposição relevante (alertar 3 vezes antes de confirmar).
+
+Certificações/Cursos
+
+CERT_OBRIGATORIA_PENDENTE – vínculo obrigatório sem “obtido”.
+
+CERT_DESEJADA_ATRASADA – alvo_obtenção vencido.
+
+CERT_EXPIRA_30D – expira em ≤30 dias.
+
+CERT_SEM_EVIDENCIA – obtida sem anexo.
+
+Contadores por colaborador: Obtidas, Obrigatórias pendentes, Desejadas em atraso, Expira≤30d (tags/etiquetas).
+
+Clientes & Visitas (por classificação)
+
+Frequência alvo: Diamante 3m | Ouro 4m | Prata 6m | Bronze 12m
+
+VISITA_NUNCA_AGENDADA, VISITA_ATRASADA, VISITA_PROX_LONGE (acima do intervalo alvo).
+
+Telas & UX (clique/edite/etiquetas)
+
+Dashboard (home)
+
+Cards: Alertas por severidade; Próximos PDI/1:1; Férias em conflito; Certificações a expirar; Visitas vencidas.
+
+Filtros por Equipe, Gerente, Cliente, Vendor.
+
+Colaboradores
+
+Lista com chips: PDI status, 1:1 status, Certs (obtidas/expira≤30d/obrigatórias pendentes), Férias (ok/vencendo), DayOff (ok/pendente).
+
+Detalhe (abas):
+
+Dados (RG, CPF, etc.), cargo, senioridade, área, gerente (dropdowns autoalimentados).
+
+Salário (somente gerente e diretoria) + histórico.
+
+PDI/1:1 (linha do tempo + criar/editar; botão OKR/Feedback → okr.coblue.com).
+
+Férias (ciclos, saldos, fracionamentos, vendas, solicitações/aprovações).
+
+Certificações/Cursos (tabela agregada; abrir modal do vínculo para DESEJADO/OBRIGATÓRIO/OBTIDO, datas e anexo).
+
+Reembolsos de estudo (lista + link).
+
+Alertas (histórico e resolução).
+
+Certificações/Cursos
+
+Catálogo (filtros por vendor/área).
+
+Botões-resumo: Desejadas, Obrigatórias, Obtidas → ao clicar, lista os analistas correspondentes.
+
+Relatórios: por vendor, área, status, expiração.
+
+Agenda
+
+Visão mês/ano; cores por equipe; conflito inline (day off/férias/PDI/1:1).
+
+Confirmação com avisos fortes para férias em conflito (3 prompts).
+
+Clientes
+
+Lista com classificação (diamante/ouro/prata/bronze) e status de visitas (etiquetas).
+
+Detalhe com última/atual/próxima visita + alertas.
+
+Admin / Configurações
+
+Equipes (nome, cor, gerente).
+
+Gerentes (vincular só se houver login criado).
+
+Parâmetros: frequência padrão 1:1, janelas de alerta (ex.: 30 dias expiração cert), política de conflitos.
+
+ADMIN-GESTAO: não vê dados sensíveis; apenas gestão de cadastros/acessos.
+
+Segurança & Acesso (RBAC fino)
+
+Diretoria: tudo.
+
+Gerente: vê salário/PDI/1:1 somente dos seus subordinados; aprova férias e day off; altera dados de equipe.
+
+Colaborador: vê dados não sensíveis de todos; vê próprio PDI/1:1/férias; pode solicitar (não aprova); não vê próprio salário.
+
+Admin-Gestão: CRUD de usuários, equipes e parâmetros; sem acesso a salários ou PDI/1:1.
+
+Field level security no backend (políticas por papel + relação gerente-subordinado).
+
+Auditoria de toda mudança relevante.
+
+Validações-chave
+
+Day off: apenas mês do aniversário (bloqueio + popup).
+
+PDI: cálculo de intervalo (<=4 meses).
+
+1:1: atraso (>N dias, default 30).
+
+Férias: regras CLT (3 períodos; 14/5/5; venda ≤10; controlar até 2 ciclos vencidos).
+
+Certificações: expiração, obrigatórias pendentes, desejadas atrasadas.
+
+Visitas: periodicidade por classificação.
+
+Relatórios & Exportações
+
+Certificações por vendor/área/status/expiração.
+
+PDI/1:1 (adimplência por equipe/gerente).
+
+Férias (vencidas, conflitos, venda de dias).
+
+Clientes (visitas vencidas/planejadas).
+
+Exportar CSV/PDF (com filtros aplicados).
+
+O que achei / riscos & melhorias
+
+Muito bem pensado: cobre governança de pessoas, capacitação e relacionamento com clientes num só lugar.
+
+Pontos de atenção:
+
+LGPD (salário, CPF) → mascaramento em listas, logs mínimos de dados sensíveis.
+
+Regras CLT são críticas; deixei parametrizadas para ajustes.
+
+Alert Engine: recomendo job periódico (ex.: a cada hora) + geração on-demand ao abrir telas.
+
+Anexos: em MVP, filesystem local; prever migração para S3/Azure Blob.
+
+Melhorias sugeridas:
+
+Objetivos/OKRs (linkamos o CoBlue, mas dá para registrar resumos de feedbacks com classificação).
+
+Matriz de habilidades por área/senioridade (radar chart por equipe).
+
+SLA interno para aprovações (férias/day off) com lembretes.
+
+Webhooks/Email para lembretes (opcional/configurável).

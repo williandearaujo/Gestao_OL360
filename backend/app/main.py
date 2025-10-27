@@ -1,57 +1,89 @@
-"""
-Gestão 360 - FastAPI Application COMPLETO
-Sistema com TODOS os módulos funcionando
-"""
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 import logging
 
-# Setup logging
+# ============================================================
+# 🧠 CONFIGURAÇÃO BASE
+# ============================================================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Import routers diretamente dos módulos
-from app.routers.auth import router as auth_router
-from app.routers.admin import router as admin_router
-from app.routers.employees import router as employees_router
-from app.routers.knowledge import router as knowledge_router
-from app.routers.employee_knowledge import router as employee_knowledge_router
-from app.routers.areas import router as areas_router
-from app.routers.teams import router as teams_router
-from app.routers.managers import router as managers_router
-from app.routers.alerts import router as alerts_router
 
 app = FastAPI(
     title="Gestão 360 - OL Tecnologia",
     description="Sistema completo de gestão de colaboradores, conhecimentos e relacionamento empresarial",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc",
+    redoc_url=None,
 )
 
-# Configuração CORS básica
+# ============================================================
+# 🌐 MIDDLEWARES - CORS CONFIGURADO
+# ============================================================
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Incluir routers
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# ============================================================
+# 📦 IMPORTAÇÃO DOS ROUTERS
+# ============================================================
+from app.routers.admin import router as admin_router
+from app.routers.alerts import router as alerts_router
+from app.routers.areas import router as areas_router
+from app.routers.auth import router as auth_router
+from app.routers.employee_knowledge import router as employee_knowledge_router
+from app.routers.employees import router as employees_router
+from app.routers.knowledge import router as knowledge_router
+from app.routers.managers import router as manager_router
+# MUDANÇA: Removido import de one_to_one_router
+# from app.routers.one_to_one import router as one_to_one_router
+# MUDANÇA: Removido import de pdi_router
+# from app.routers.pdi import router as pdi_router
+from app.routers.teams import router as teams_router
+from app.routers.vacations import router as vacations_router
+
+# ============================================================
+# 📎 INCLUSÃO DOS ROUTERS
+# ============================================================
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(employees_router)
-app.include_router(knowledge_router)
 app.include_router(employee_knowledge_router)
+app.include_router(knowledge_router)
 app.include_router(areas_router)
 app.include_router(teams_router)
-app.include_router(managers_router)
+app.include_router(manager_router)
 app.include_router(alerts_router)
+# MUDANÇA: Removido include_router de one_to_one_router
+# app.include_router(one_to_one_router)
+# MUDANÇA: Removido include_router de pdi_router
+# app.include_router(pdi_router)
+app.include_router(vacations_router)
 
-logger.info("✅ Todos os routers incluídos")
 
+logger.info("✅ Todos os routers incluídos com sucesso.")
+
+# ============================================================
+# 📁 ARQUIVOS ESTÁTICOS
+# ============================================================
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# ============================================================
+# 🌍 ROTAS BÁSICAS
+# ============================================================
 @app.get("/", tags=["Sistema"])
 async def root():
     return {
@@ -68,7 +100,6 @@ async def health_check():
     try:
         from app.database import check_database_connection
         db_status = check_database_connection()
-
         return {
             "status": "healthy" if db_status.get("status") == "healthy" else "unhealthy",
             "version": "2.0.0",
@@ -79,35 +110,88 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         return JSONResponse(
             status_code=503,
-            content={
-                "status": "unhealthy",
-                "error": str(e)
-            }
+            content={"status": "unhealthy", "error": str(e)},
         )
 
+# ============================================================
+# ⚠️ TRATAMENTO DE EXCEÇÕES
+# ============================================================
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
+async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.detail, "status_code": exc.status_code},
     )
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
+async def general_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error", "detail": str(exc)},
     )
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("🚀 Iniciando Gestão 360 Backend...")
-    logger.info("📊 Sistema: Gestão 360 - OL Tecnologia")
-    logger.info("🔧 Versão: 2.0.0")
-    logger.info("✅ Backend iniciado com sucesso!")
+# ============================================================
+# 🎨 RE-DOC PERSONALIZADO OTIMIZADO
+# ============================================================
+@app.get("/redoc", include_in_schema=False)
+async def custom_redoc():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>Gestão 360 API Docs</title>
+        <!-- favicon da OL -->
+        <link rel="icon" href="https://ol-tecnologia.com.br/favicon.ico" />
+        <style>
+          body { margin:0; padding:0; font-family:'Inter',sans-serif; }
+          #redoc-container {
+            background-color:#cccccc !important;
+          }
+          .topbar {
+            background-color:#cccccc !important;
+          }
+          .header-bar {
+            background:#cccccc !important;
+            text-align:center;
+            padding:10px;
+          }
+          .header-bar img {
+            height:60px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-bar">
+          <img src="/static/lg_t_white.png" alt="Gestão 360 - OL Tecnologia">
+        </div>
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("👋 Encerrando Gestão 360 Backend...")
-    logger.info("✅ Backend encerrado com sucesso!")
+        <redoc id="redoc-container"
+               spec-url="/openapi.json"
+               lazy-rendering
+               hide-download-button
+               theme='{
+                 "colors": {
+                   "primary": { "main": "#e63946" },
+                   "text": { "primary": "#1d3557", "secondary": "#457b9d" },
+                   "responses": {
+                     "success": { "color": "#06d6a0" },
+                     "error": { "color": "#ef476f" }
+                   }
+                 },
+                 "typography": {
+                   "fontSize": "15px",
+                   "fontFamily": "Inter, sans-serif",
+                   "headings": { "fontFamily": "Inter, sans-serif", "fontWeight": "600" }
+                 }
+               }'>
+        </redoc>
+
+        <!-- usa CDN (mais leve e atualizada) -->
+        <script src="/static/redoc.standalone.js"></script>
+      </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+

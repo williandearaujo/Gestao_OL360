@@ -5,7 +5,7 @@ export default function Head() {
       <title>Gestão 360 OL - Sistema Online</title>
 
       {/* Favicon */}
-      <link rel="icon" href="/favicon.ico" />
+      <link rel="icon" href="https://ol-tecnologia.com.br/favicon.ico" />
 
       {/* Meta tags básicas */}
       <meta charSet="UTF-8" />

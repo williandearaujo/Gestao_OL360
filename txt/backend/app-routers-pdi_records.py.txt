@@ -1,0 +1,110 @@
+from fastapi import APIRouter, HTTPException, Depends, Query
+from sqlalchemy.orm import Session, joinedload
+from typing import Optional, List
+from datetime import datetime
+
+from app.database import get_db
+from app.models.pdi import PDI
+from app.models.employee import Employee
+from app.core.security import get_current_user
+from app.models.user import User
+
+router = APIRouter(prefix="/pdi", tags=["PDI"])
+
+
+@router.get("", response_model=List[dict])
+async def list_pdi_records(
+        employee_id: Optional[int] = Query(None),
+        status: Optional[str] = Query(None),
+        skip: int = 0,
+        limit: int = 100,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Lista registros de PDI"""
+    query = db.query(PDI).options(joinedload(PDI.employee))
+
+    if employee_id:
+        query = query.filter(PDI.employee_id == employee_id)
+
+    if status:
+        query = query.filter(PDI.status == status)
+
+    pdis = query.order_by(PDI.data_inicio.desc()).offset(skip).limit(limit).all()
+
+    return {
+        "data": [
+            {
+                **pdi.to_dict(),
+                "employee_nome": pdi.employee.nome if pdi.employee else None
+            }
+            for pdi in pdis
+        ],
+        "total": query.count()
+    }
+
+
+@router.post("")
+async def create_pdi_record(
+        pdi_data: dict,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Cria registro de PDI"""
+    new_pdi = PDI(
+        employee_id=pdi_data['employee_id'],
+        titulo=pdi_data.get('titulo'),
+        descricao=pdi_data.get('descricao'),
+        objetivos=pdi_data.get('objetivos', []),
+        acoes=pdi_data.get('acoes', []),
+        data_inicio=pdi_data.get('data_inicio', datetime.now().date()),
+        status='PLANEJADO'
+    )
+
+    db.add(new_pdi)
+    db.commit()
+    db.refresh(new_pdi)
+
+    return {"data": new_pdi.to_dict()}
+
+
+@router.put("/{pdi_id}")
+async def update_pdi_record(
+        pdi_id: int,
+        pdi_data: dict,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Atualiza registro de PDI"""
+    pdi = db.query(PDI).filter(PDI.id == pdi_id).first()
+
+    if not pdi:
+        raise HTTPException(status_code=404, detail="PDI não encontrado")
+
+    # Atualizar campos
+    for key, value in pdi_data.items():
+        if hasattr(pdi, key):
+            setattr(pdi, key, value)
+
+    db.commit()
+    db.refresh(pdi)
+
+    return {"data": pdi.to_dict()}
+
+
+@router.delete("/{pdi_id}")
+async def delete_pdi_record(
+        pdi_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Exclui registro de PDI"""
+    pdi = db.query(PDI).filter(PDI.id == pdi_id).first()
+
+    if not pdi:
+        raise HTTPException(status_code=404, detail="PDI não encontrado")
+
+    db.delete(pdi)
+    db.commit()
+
+    return {"message": "PDI excluído com sucesso"}

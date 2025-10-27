@@ -50,28 +50,28 @@ def init_database():
                 "username": "admin",
                 "email": "admin@ol360.com",
                 "password": "Admin@123456",
-                "role": "ADMIN",
+                "role": "admin",
                 "is_admin": True
             },
             {
                 "username": "diretoria",
                 "email": "diretoria@ol360.com",
                 "password": "Diretoria@123",
-                "role": "DIRETORIA",
+                "role": "diretoria",
                 "is_admin": True
             },
             {
                 "username": "gerente1",
                 "email": "gerente1@ol360.com",
                 "password": "Gerente@123",
-                "role": "GERENTE",
+                "role": "gerente",
                 "is_admin": False
             },
             {
                 "username": "colaborador1",
                 "email": "colaborador1@ol360.com",
                 "password": "Colab@123",
-                "role": "COLABORADOR",
+                "role": "colaborador",
                 "is_admin": False
             }
         ]

@@ -3,8 +3,8 @@ const OL_LIGHT = {
   light: '#c9252c',
   hover: '#6d0f10',
   hoverText: '#4C1D1D',
-  bg: '#fef2f2',          // fundo geral claro da página
-  cardBg: '#fbfafb',      // fundo cinza claro para cards (destaque sutil)
+  bg: '#fef2f2',
+  cardBg: '#fbfafb',
   border: '#c9252c',
   text: '#821314',
 
@@ -24,8 +24,8 @@ const OL_DARK = {
   light: '#f87171',
   hover: 'rgba(185, 28, 28, 0.9)',
   hoverText: '#ffffff',
-  bg: '#1f1f1f',          // fundo geral escuro da página
-  cardBg: 'rgb(44 44 44 / <alpha-value>)', // fundo escuro para cards
+  bg: '#1f1f1f',
+  cardBg: 'rgb(44 44 44 / <alpha-value>)',
   border: '#f87171',
   text: '#f87171',
 
@@ -50,41 +50,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ol: {
-          primary: OL_LIGHT.primary,
-          light: OL_LIGHT.light,
-          hover: OL_LIGHT.hover,
-          hoverText: OL_LIGHT.hoverText,
-          bg: OL_LIGHT.bg,
-          cardBg: OL_LIGHT.cardBg,
-          border: OL_LIGHT.border,
-          text: OL_LIGHT.text,
-          black: OL_LIGHT.black,
-          white: OL_LIGHT.white,
-          grayLight: OL_LIGHT.grayLight,
-          grayMedium: OL_LIGHT.grayMedium,
-          success: OL_LIGHT.success,
-          warning: OL_LIGHT.warning,
-          error: OL_LIGHT.error,
-          info: OL_LIGHT.info,
-        },
-        darkOl: {
-          primary: OL_DARK.primary,
-          light: OL_DARK.light,
-          hover: OL_DARK.hover,
-          hoverText: OL_DARK.hoverText,
-          bg: OL_DARK.bg,
-          cardBg: OL_DARK.cardBg,
-          border: OL_DARK.border,
-          text: OL_DARK.text,
-          black: OL_DARK.black,
-          white: OL_DARK.white,
-          grayLight: OL_DARK.grayLight,
-          grayMedium: OL_DARK.grayMedium,
-          success: OL_DARK.success,
-          warning: OL_DARK.warning,
-          error: OL_DARK.error,
-          info: OL_DARK.info,
+        ol: { ...OL_LIGHT },
+        darkOl: { ...OL_DARK },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.2s ease-in-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0, transform: 'scale(0.95)' },
+          '100%': { opacity: 1, transform: 'scale(1)' },
         },
       },
     },

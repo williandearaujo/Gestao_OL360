@@ -1,13 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+
+interface Employee {
+  id: string;
+  nome: string;
+  email: string;
+  cpf: string;
+  data_nascimento: string;
+  telefone?: string;
+  endereco?: string;
+  cargo: string;
+  departamento: string;
+  data_admissao: string;
+  salario?: number;
+  manager_id?: string | null;
+  status: string;
+  nivel_acesso?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export default function ColaboradorDetalhesPage() {
   const params = useParams();
   const router = useRouter();
-  const [colaborador, setColaborador] = useState<any>(null);
+  const [colaborador, setColaborador] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +65,7 @@ export default function ColaboradorDetalhesPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">{colaborador.nome_completo}</h1>
+          <h1 className="text-3xl font-bold">{colaborador.nome}</h1>
           <p className="text-ol-grayMedium dark:text-darkOl-grayMedium mt-1">
             {colaborador.cargo} • {colaborador.departamento}
           </p>
@@ -71,16 +90,16 @@ export default function ColaboradorDetalhesPage() {
       <div className="mb-6">
         <span
           className={`px-4 py-2 rounded-full text-sm font-semibold ${
-            colaborador.status === "ATIVO"
+            colaborador.status.toLowerCase() === "ativo"
               ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
-              : colaborador.status === "FERIAS"
+              : colaborador.status.toLowerCase() === "ferias"
               ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
-              : colaborador.status === "AFASTADO"
+              : colaborador.status.toLowerCase() === "afastado"
               ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
               : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
           }`}
         >
-          {colaborador.status}
+          {colaborador.status.toUpperCase()}
         </span>
       </div>
 
@@ -103,14 +122,6 @@ export default function ColaboradorDetalhesPage() {
               </div>
               <div>
                 <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  RG
-                </p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.rg || "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
                   Data de Nascimento
                 </p>
                 <p className="font-semibold text-ol-black dark:text-darkOl-white">
@@ -119,14 +130,6 @@ export default function ColaboradorDetalhesPage() {
                         "pt-BR"
                       )
                     : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  Estado Civil
-                </p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.estado_civil || "-"}
                 </p>
               </div>
             </div>
@@ -140,34 +143,18 @@ export default function ColaboradorDetalhesPage() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  Email Corporativo
+                  Email
                 </p>
                 <p className="font-semibold text-ol-primary dark:text-darkOl-primary">
-                  {colaborador.email_corporativo}
+                  {colaborador.email}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  Email Pessoal
+                  Telefone
                 </p>
                 <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.email_pessoal || "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  Telefone Corporativo
-                </p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.telefone_corporativo || "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
-                  Telefone Pessoal
-                </p>
-                <p className="font-semibold text-ol-black dark:text-darkOl-white">
-                  {colaborador.telefone_pessoal || "-"}
+                  {colaborador.telefone || "-"}
                 </p>
               </div>
               {colaborador.endereco && (
@@ -213,8 +200,16 @@ export default function ColaboradorDetalhesPage() {
                   {new Date(colaborador.data_admissao).toLocaleDateString("pt-BR")}
                 </p>
               </div>
-              {colaborador.salario && (
-                <div>
+              <div>
+                <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+                  Nível de Acesso
+                </p>
+                <p className="font-semibold text-ol-black dark:text-darkOl-white">
+                  {colaborador.nivel_acesso || "-"}
+                </p>
+              </div>
+              {colaborador.salario !== undefined && (
+                <div className="sm:col-span-2">
                   <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
                     Salário
                   </p>

@@ -1,0 +1,36 @@
+export interface Colaborador {
+  nome_completo: string;
+  cpf: string | null;
+  rg?: string | null;
+  data_nascimento: string | null;
+  estado_civil: string | null;
+  genero: string | null;
+  email_pessoal?: string | null;
+  telefone_pessoal?: string | null;
+  telefone_corporativo?: string | null;
+  email_corporativo: string | null;
+  cargo: string | null;
+  area_id?: number | null;
+  data_admissao: string | null;
+  data_demissao?: string | null;
+  salario?: number | null;
+  tipo_contrato: string | null;
+  nivel: string | null;
+  status: string | null;
+  departamento?: string | null;
+  endereco_cep?: string | null;
+  endereco_logradouro?: string | null;
+  endereco_numero?: string | null;
+  endereco_complemento?: string | null;
+  endereco_bairro?: string | null;
+  endereco_cidade?: string | null;
+  endereco_estado?: string | null;
+  banco?: string | null;
+  agencia?: string | null;
+  conta?: string | null;
+  pix?: string | null;
+  team_id?: string | null;
+  contato_emergencia_nome?: string | null;
+  contato_emergencia_telefone?: string | null;
+  contato_emergencia_parentesco?: string | null;
+}

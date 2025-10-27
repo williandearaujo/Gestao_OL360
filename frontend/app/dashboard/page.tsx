@@ -3,55 +3,38 @@
 import React, { useState, useEffect } from 'react'
 import {
   Users, BookOpen, Award, TrendingUp, AlertCircle,
-  Calendar, Clock, CheckCircle, XCircle
+  Calendar, Clock, CheckCircle
 } from 'lucide-react'
+import OLCardStats from '@/components/ui/OLCardStats'
+import OLButton from '@/components/ui/OLButton'
+import OLModal from '@/components/ui/OLModal'
+import { getColaboradores } from '@/lib/api'
 
-interface DashboardStats {
-  colaboradores: {
-    total: number
-    ativos: number
-    ferias: number
-    afastados: number
-  }
-  conhecimentos: {
-    total: number
-    ativos: number
-    certificacoes: number
-    cursos: number
-  }
-  alertas: {
-    total: number
-    criticos: number
-    avisos: number
-  }
-  pdi: {
-    total: number
-    concluidos: number
-    emAndamento: number
-    atrasados: number
-  }
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+async function getConhecimentos() {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error('Token não encontrado')
+
+  const res = await fetch(`${API_URL}/knowledge`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  if (!res.ok) throw new Error('Erro ao buscar conhecimentos')
+  return res.json()
 }
 
-interface StatCardProps {
-  title: string
-  value: number
-  subtitle?: string
-  icon: React.ReactNode
-  color: string
-  trend?: string
-}
-
-const StatCard: React.FC<StatCardProps> = ({
-  title, value, subtitle, icon, color, trend
-}) => (
-  <div className={`bg-white rounded-xl shadow-md p-6 border-l-4 ${color} hover:shadow-lg transition-shadow`}>
+const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
+  <div
+    className={`bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6 border-l-4 ${color} hover:shadow-lg transition-shadow`}
+  >
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-        <p className="text-3xl font-bold text-gray-900">{value}</p>
-        {subtitle && (
-          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
-        )}
+        <p className="text-sm font-medium text-ol-grayMedium dark:text-darkOl-grayMedium mb-1">{title}</p>
+        <p className="text-3xl font-bold text-ol-text dark:text-darkOl-text">{value}</p>
+        {subtitle && <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium mt-1">{subtitle}</p>}
         {trend && (
           <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
             <TrendingUp className="w-3 h-3" />
@@ -66,18 +49,9 @@ const StatCard: React.FC<StatCardProps> = ({
   </div>
 )
 
-interface ActivityItem {
-  id: string
-  type: 'pdi' | 'certificacao' | 'ferias' | '1x1'
-  employee: string
-  description: string
-  time: string
-  status: 'pending' | 'completed' | 'warning'
-}
-
-const ActivityFeed: React.FC<{ activities: ActivityItem[] }> = ({ activities }) => (
-  <div className="bg-white rounded-xl shadow-md p-6">
-    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+const ActivityFeed = ({ activities }) => (
+  <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
+    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text dark:text-darkOl-text">
       <Clock className="w-5 h-5 text-blue-600" />
       Atividades Recentes
     </h3>
@@ -85,13 +59,17 @@ const ActivityFeed: React.FC<{ activities: ActivityItem[] }> = ({ activities }) 
       {activities.map((activity) => (
         <div
           key={activity.id}
-          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-darkOl-bg transition-colors border border-ol-border dark:border-darkOl-border"
         >
-          <div className={`p-2 rounded-full ${
-            activity.status === 'completed' ? 'bg-green-100' :
-            activity.status === 'warning' ? 'bg-yellow-100' :
-            'bg-blue-100'
-          }`}>
+          <div
+            className={`p-2 rounded-full ${
+              activity.status === 'completed'
+                ? 'bg-green-100'
+                : activity.status === 'warning'
+                ? 'bg-yellow-100'
+                : 'bg-blue-100'
+            }`}
+          >
             {activity.status === 'completed' ? (
               <CheckCircle className="w-4 h-4 text-green-600" />
             ) : activity.status === 'warning' ? (
@@ -101,9 +79,9 @@ const ActivityFeed: React.FC<{ activities: ActivityItem[] }> = ({ activities }) 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900">{activity.employee}</p>
-            <p className="text-sm text-gray-600">{activity.description}</p>
-            <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
+            <p className="text-sm font-medium text-ol-text dark:text-darkOl-text">{activity.employee}</p>
+            <p className="text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">{activity.description}</p>
+            <p className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium mt-1">{activity.time}</p>
           </div>
         </div>
       ))}
@@ -112,14 +90,14 @@ const ActivityFeed: React.FC<{ activities: ActivityItem[] }> = ({ activities }) 
 )
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState({
     colaboradores: { total: 0, ativos: 0, ferias: 0, afastados: 0 },
     conhecimentos: { total: 0, ativos: 0, certificacoes: 0, cursos: 0 },
-    alertas: { total: 0, criticos: 0, avisos: 0 },
-    pdi: { total: 0, concluidos: 0, emAndamento: 0, atrasados: 0 }
+    alertas: { total: 5, criticos: 1, avisos: 4 },
+    pdi: { total: 38, concluidos: 12, emAndamento: 20, atrasados: 6 }
   })
 
-  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -130,20 +108,30 @@ export default function DashboardPage() {
     try {
       setLoading(true)
 
-      // TODO: Substituir por chamadas reais à API
-      // Dados mockados por enquanto
-      setStats({
-        colaboradores: { total: 42, ativos: 38, ferias: 2, afastados: 2 },
-        conhecimentos: { total: 156, ativos: 143, certificacoes: 45, cursos: 98 },
-        alertas: { total: 12, criticos: 3, avisos: 9 },
-        pdi: { total: 38, concluidos: 12, emAndamento: 20, atrasados: 6 }
-      })
+      const colaboradores = await getColaboradores()
+      const conhecimentos = await getConhecimentos()
+
+      const totalColaboradores = colaboradores.length
+      const ativos = colaboradores.filter(c => c.status.toLowerCase() === 'ativo').length
+      const ferias = colaboradores.filter(c => c.status.toLowerCase() === 'ferias').length
+      const afastados = colaboradores.filter(c => c.status.toLowerCase() === 'afastado').length
+
+      const totalConhecimentos = conhecimentos.length
+      const ativosConhecimentos = conhecimentos.filter(k => k.status === 'ATIVO').length
+      const certificacoes = conhecimentos.filter(k => k.tipo === 'CERTIFICACAO').length
+      const cursos = conhecimentos.filter(k => k.tipo === 'CURSO').length
+
+      setStats(prev => ({
+        ...prev,
+        colaboradores: { total: totalColaboradores, ativos, ferias, afastados },
+        conhecimentos: { total: totalConhecimentos, ativos: ativosConhecimentos, certificacoes, cursos }
+      }))
 
       setActivities([
         {
           id: '1',
           type: 'certificacao',
-          employee: 'João Silva',
+          employee: colaboradores[0]?.nome || 'Desconhecido',
           description: 'Obteve certificação AWS Solutions Architect',
           time: 'Há 2 horas',
           status: 'completed'
@@ -151,7 +139,7 @@ export default function DashboardPage() {
         {
           id: '2',
           type: 'pdi',
-          employee: 'Maria Santos',
+          employee: colaboradores[1]?.nome || 'Desconhecido',
           description: 'PDI vencendo em 7 dias',
           time: 'Há 4 horas',
           status: 'warning'
@@ -159,13 +147,12 @@ export default function DashboardPage() {
         {
           id: '3',
           type: '1x1',
-          employee: 'Pedro Oliveira',
+          employee: colaboradores[2]?.nome || 'Desconhecido',
           description: 'Reunião 1:1 agendada para amanhã',
           time: 'Há 6 horas',
           status: 'pending'
         }
       ])
-
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error)
     } finally {
@@ -175,22 +162,22 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ol-primary mx-auto mb-4"></div>
+          <p className="text-ol-text dark:text-darkOl-text">Carregando dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-ol-bg p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-ol-text">Dashboard</h1>
+          <p className="text-ol-grayMedium mt-2">
             Bem-vindo ao sistema de Gestão 360 - OL Tecnologia
           </p>
         </div>
@@ -201,20 +188,18 @@ export default function DashboardPage() {
             title="Colaboradores Ativos"
             value={stats.colaboradores.ativos}
             subtitle={`${stats.colaboradores.total} total`}
-            icon={<Users className="w-6 h-6 text-blue-600" />}
-            color="border-blue-600"
+            icon={<Users className="w-6 h-6 text-info" />}
+            color="border-info"
             trend="+5% este mês"
           />
-
           <StatCard
             title="Conhecimentos"
             value={stats.conhecimentos.total}
             subtitle={`${stats.conhecimentos.certificacoes} certificações`}
-            icon={<BookOpen className="w-6 h-6 text-green-600" />}
-            color="border-green-600"
+            icon={<BookOpen className="w-6 h-6 text-emerald-600" />}
+            color="border-emerald-600"
             trend="+12 novos"
           />
-
           <StatCard
             title="PDI em Andamento"
             value={stats.pdi.emAndamento}
@@ -222,58 +207,60 @@ export default function DashboardPage() {
             icon={<TrendingUp className="w-6 h-6 text-purple-600" />}
             color="border-purple-600"
           />
-
           <StatCard
             title="Alertas Ativos"
             value={stats.alertas.total}
             subtitle={`${stats.alertas.criticos} críticos`}
-            icon={<AlertCircle className="w-6 h-6 text-red-600" />}
-            color="border-red-600"
+            icon={<AlertCircle className="w-6 h-6 text-danger" />}
+            color="border-danger"
           />
         </div>
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Status dos Colaboradores */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">Status dos Colaboradores</h3>
+          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text">
+              <Users className="w-5 h-5 text-info" />
+              Status dos Colaboradores
+            </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Ativos</span>
+                  <span className="text-sm text-ol-grayMedium">Ativos</span>
                 </div>
-                <span className="text-sm font-semibold">{stats.colaboradores.ativos}</span>
+                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.ativos}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Férias</span>
+                  <span className="text-sm text-ol-grayMedium">Férias</span>
                 </div>
-                <span className="text-sm font-semibold">{stats.colaboradores.ferias}</span>
+                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.ferias}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Afastados</span>
+                  <span className="text-sm text-ol-grayMedium">Afastados</span>
                 </div>
-                <span className="text-sm font-semibold">{stats.colaboradores.afastados}</span>
+                <span className="text-sm font-semibold text-ol-text">{stats.colaboradores.afastados}</span>
               </div>
             </div>
           </div>
 
           {/* Progresso do PDI */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">Progresso do PDI</h3>
+          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4 text-ol-text">Progresso do PDI</h3>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">Concluídos</span>
-                  <span className="font-semibold">
+                  <span className="text-ol-grayMedium">Concluídos</span>
+                  <span className="font-semibold text-ol-text">
                     {stats.pdi.concluidos}/{stats.pdi.total}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-ol-bg rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full transition-all"
                     style={{ width: `${(stats.pdi.concluidos / stats.pdi.total) * 100}%` }}
@@ -282,12 +269,12 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">Em Andamento</span>
-                  <span className="font-semibold">
+                  <span className="text-ol-grayMedium">Em Andamento</span>
+                  <span className="font-semibold text-ol-text">
                     {stats.pdi.emAndamento}/{stats.pdi.total}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-ol-bg rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all"
                     style={{ width: `${(stats.pdi.emAndamento / stats.pdi.total) * 100}%` }}
@@ -296,12 +283,10 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">Atrasados</span>
-                  <span className="font-semibold text-red-600">
-                    {stats.pdi.atrasados}
-                  </span>
+                  <span className="text-ol-grayMedium">Atrasados</span>
+                  <span className="font-semibold text-red-600">{stats.pdi.atrasados}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-ol-bg rounded-full h-2">
                   <div
                     className="bg-red-500 h-2 rounded-full transition-all"
                     style={{ width: `${(stats.pdi.atrasados / stats.pdi.total) * 100}%` }}
@@ -312,9 +297,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Próximos Eventos */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
+          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-ol-text">
+              <Calendar className="w-5 h-5 text-info" />
               Próximos Eventos
             </h3>
             <div className="space-y-3">

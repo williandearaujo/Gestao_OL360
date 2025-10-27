@@ -1,0 +1,176 @@
+Tabela: employees (colaboradores)
+
+    id: uuid
+
+    nome_completo: character varying
+
+    cpf: character varying
+
+    rg: character varying
+
+    data_nascimento: date
+
+    estado_civil: character varying
+
+    email_pessoal: character varying
+
+    email_corporativo: character varying
+
+    telefone_pessoal: character varying
+
+    telefone_corporativo: character varying
+
+    endereco: character varying
+
+    cargo: character varying
+
+    departamento: character varying
+
+    data_admissao: date
+
+    salario: numeric
+
+    status: character varying
+
+    manager_id: uuid
+
+    team_id: uuid
+
+Tabela: alertas (alerts)
+
+    id: uuid
+
+    employee_id: uuid
+
+    tipo: character varying
+
+    mensagem: text
+
+    data_criacao: timestamp without time zone
+
+    status: character varying
+
+Tabela: knowledge (conhecimentos)
+
+    id: uuid
+
+    nome: character varying
+
+    descricao: character varying
+
+    tipo: character varying
+
+    nivel_minimo: character varying
+
+    categoria: character varying
+
+Tabela: employee_knowledge (vinculo conhecimento)
+
+    id: uuid
+
+    employee_id: uuid
+
+    knowledge_id: uuid
+
+    nivel: character varying
+
+    data_obtencao: date
+
+Tabela: vacations (férias)
+
+    id: uuid
+
+    employee_id: uuid
+
+    start_date: date
+
+    end_date: date
+
+    status: character varying
+
+    approved_by: uuid
+
+Tabela: one_to_ones (1 x 1)
+
+    id: uuid
+
+    manager_id: uuid
+
+    employee_id: uuid
+
+    scheduled_date: timestamp without time zone
+
+    status: character varying
+
+    notes: text
+
+Tabela: pdis (PDI)
+
+    id: uuid
+
+    employee_id: uuid
+
+    goal: character varying
+
+    description: text
+
+    deadline: date
+
+    status: character varying
+
+Tabela: day_off (folgas)
+
+    id: uuid
+
+    employee_id: uuid
+
+    date: date
+
+    reason: character varying
+
+    status: character varying
+Tabela: teams (equipes)
+
+    id: uuid
+
+    nome: character varying
+
+    descricao: character varying
+
+    area_id: uuid
+
+    manager_id: uuid
+
+    status: character varying
+
+Tabela: areas (áreas)
+
+    id: uuid
+
+    nome: character varying
+
+    descricao: character varying
+
+    responsavel_id: uuid
+
+    status: character varying
+
+Tabela: departments (departamentos)
+
+    id: uuid
+
+    nome: character varying
+
+    descricao: character varying
+
+    status: character varying
+
+Tabela: project_members (membros de projetos, possível vínculo com colaboradores)
+
+    id: uuid
+
+    projeto_id: uuid
+
+    colaborador_id: uuid
+
+    papel: character varying

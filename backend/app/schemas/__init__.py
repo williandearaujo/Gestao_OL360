@@ -27,7 +27,6 @@ from .employee import (
     EmployeeDetailResponse,
     EmployeeStats,
     EmployeeVacation,
-    EmployeePDI,
 )
 
 from .employee_knowledge import (
@@ -79,11 +78,33 @@ from .organization import (
     ManagerResponse,
 )
 
-# Caso futuramente queira incluir esses módulos
-#from .pdi import (
-#    # Adicione os schemas PDI aqui
-#)
+# MUDANÇA: Removido PDI
+# from .pdi import (
+#     PdiBase,
+#     PdiCreate,
+#     PdiUpdate,
+#     PdiResponse,
+# )
 
-#from .one_to_one import (
-#    # Adicione os schemas One to One aqui
-#)
+# MUDANÇA: Removido OneToOne
+# from .one_to_one import (
+#     OneToOneBase,
+#     OneToOneCreate,
+#     OneToOneUpdate,
+#     OneToOneResponse,
+# )
+
+from .area import (
+    AreaBase,
+    AreaCreate,
+    AreaResponse,
+)
+
+# MUDANÇA: Removido Vacation
+# from app.schemas.vacation import (
+#     VacationPeriod,
+#     VacationCreate,
+#     VacationUpdate,
+#     VacationResponse,
+# )
+

@@ -18,35 +18,35 @@ try:
     from .admin import router as admin
     logger.info("✅ Admin")
 except ImportError:
-    admin = APIRouter(prefix="/admin", tags=["Admin"])
+    admin = APIRouter(prefix="/admin", tags=["Administração"])
 
-# Employees
+# Employee
 try:
-    from .employees import router as employees
-    logger.info("✅ Employees")
+    from .employee import router as employee
+    logger.info("✅ Employee")
 except ImportError:
-    employees = APIRouter(prefix="/employees", tags=["Colaboradores"])
+    employee = APIRouter(prefix="/employee", tags=["Colaboradores"])
 
-# Areas
+# Area
 try:
-    from .areas import router as areas
-    logger.info("✅ Areas")
+    from .area import router as area
+    logger.info("✅ Area")
 except ImportError:
-    areas = APIRouter(prefix="/areas", tags=["Áreas"])
+    area = APIRouter(prefix="/area", tags=["Áreas"])
 
-# Teams
+# Team
 try:
-    from .teams import router as teams
-    logger.info("✅ Teams")
+    from .team import router as team
+    logger.info("✅ Team")
 except ImportError:
-    teams = APIRouter(prefix="/teams", tags=["Times"])
+    team = APIRouter(prefix="/team", tags=["Times"])
 
-# Managers
+# Manager
 try:
-    from .managers import router as managers
-    logger.info("✅ Managers")
+    from .managers import router as manager
+    logger.info("✅ Manager")
 except ImportError:
-    managers = APIRouter(prefix="/managers", tags=["Gestores"])
+    manager = APIRouter(prefix="/manager", tags=["Gestores"])
 
 # Knowledge
 try:
@@ -69,22 +69,30 @@ try:
 except ImportError:
     alerts = APIRouter(prefix="/alerts", tags=["Alertas"])
 
-# PDI Records
+# PDI
 try:
-    from .pdi_records import router as pdi_records
+    from .pdi import router as pdi
     logger.info("✅ PDI")
 except ImportError:
-    pdi_records = APIRouter(prefix="/pdi", tags=["PDI"])
+    pdi = APIRouter(prefix="/pdi", tags=["PDI"])
 
 # One to One
 try:
-    from .one_to_one_records import router as one_to_one_records
-    logger.info("✅ One-to-One")
+    from .one_to_one import router as one_to_one
+    logger.info("✅ One to One")
 except ImportError:
-    one_to_one_records = APIRouter(prefix="/one-to-one", tags=["1:1"])
+    one_to_one = APIRouter(prefix="/one-to-one", tags=["1x1"])
+
+# User
+try:
+    from .vacations import router as vacations
+    logger.info("✅ Vacations")
+except ImportError:
+    user = APIRouter(prefix="/vacations", tags=["Férias"])
 
 __all__ = [
-    "auth", "admin", "employees", "areas", "teams",
-    "managers", "knowledge", "employee_knowledge",
-    "alerts", "pdi_records", "one_to_one_records"
+    "auth", "admin", "employee", "area", "team",
+    "manager", "knowledge", "employee_knowledge",
+    "alerts", "pdi", "one_to_one",
+    "vacations"
 ]

@@ -1,38 +1,21 @@
 """
-Model de Área Organizacional
-Gestão 360 - OL Tecnologia
+Models Area - Áreas/Departamentos
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+import uuid
+from sqlalchemy import Column, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.models.base import Base
 
-
 class Area(Base):
-    """Model de Área Organizacional"""
     __tablename__ = "areas"
 
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), nullable=False, unique=True, index=True)
-    sigla = Column(String(10), nullable=False, unique=True)
-    descricao = Column(Text)
-    cor = Column(String(7), default="#3B82F6")
-    ativa = Column(Boolean, default=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nome = Column(String(100), unique=True, nullable=False)
+    descricao = Column(String(255))
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Relacionamento: Uma área pode ter múltiplos funcionários
+    employees = relationship("Employee", back_populates="area")
 
-    teams = relationship("Team", back_populates="area")
-    managers = relationship("Manager", back_populates="area")
+   
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "nome": self.nome,
-            "sigla": self.sigla,
-            "descricao": self.descricao,
-            "cor": self.cor,
-            "ativa": self.ativa,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }

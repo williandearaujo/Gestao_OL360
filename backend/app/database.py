@@ -92,14 +92,25 @@ def init_database():
         
         # Importar models
         try:
-            from app.models import user
+            from app.models import user, audit_log # MUDANÇA: Importar audit_log
         except:
             pass
         
         # Criar tabelas (se não existirem)
         Base.metadata.create_all(bind=engine)
         
-        logger.info("✅ Banco de dados inicializado com sucesso")
+        logger.info("✅ Tabelas do banco de dados verificadas/criadas.")
+
+        # MUDANÇA: Aplicar gatilhos de auditoria
+        try:
+            with open("app/database_triggers.sql", "r", encoding="utf-8") as f:
+                trigger_sql = f.read()
+            with engine.begin() as conn:
+                conn.execute(text(trigger_sql))
+            logger.info("✅ Gatilhos de auditoria aplicados com sucesso.")
+        except Exception as e:
+            logger.error(f"❌ Erro ao aplicar gatilhos de auditoria: {e}")
+            # Continua mesmo se o trigger falhar, mas loga o erro
         
         # Health check
         health = check_database_connection()
@@ -146,3 +157,4 @@ class PaginatedResponse(BaseModel, Generic[T]):
             page_size=page_size,
             total_pages=total_pages
         )
+

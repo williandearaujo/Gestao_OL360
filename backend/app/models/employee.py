@@ -1,91 +1,82 @@
 """
-Model de Colaborador - COMPLETO
-Gestão 360 - OL Tecnologia
+Models Employee - Colaboradores
 """
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, JSON, Text, Boolean, DateTime
+import uuid
+from sqlalchemy import (
+    Column, String, Date, ForeignKey, Integer,
+    Enum as SQLEnum, Text, Numeric, DateTime
+)
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
+import enum
 
+class EmployeeStatus(str, enum.Enum):
+    ATIVO = "ATIVO"
+    INATIVO = "INATIVO"
+    FERIAS = "FERIAS"
+    DAYOFF = "DAYOFF"
+    DESLIGADO = "DESLIGADO"
 
 class Employee(Base):
-    """Model de Colaborador com todos os campos necessários"""
     __tablename__ = "employees"
 
-    # Identificação
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(255), nullable=False, index=True)
-    email = Column(String(320), unique=True, nullable=False, index=True)
-    cpf = Column(String(11), unique=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Informações Básicas
+    nome_completo = Column(String(255), nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    
+    # Informações Pessoais
+    cpf = Column(String(14), unique=True, nullable=True)
+    rg = Column(String(20), nullable=True)
+    data_nascimento = Column(Date, nullable=True)
+    telefone = Column(String(20), nullable=True)
+    telefone_pessoal = Column(String(20), nullable=True)
+    email_pessoal = Column(String(100), nullable=True)
+    endereco = Column(Text, nullable=True)
+    contato_emergencia = Column(String(255), nullable=True)
+    
+    # Informações Profissionais
+    cargo = Column(String(100), nullable=False)
+    data_admissao = Column(Date, nullable=True)
+    salario = Column(Numeric(10, 2), nullable=True)
+    departamento = Column(String(100), nullable=True) # Pode ser substituído por Area
+    senioridade = Column(String(50), nullable=True)
+    status = Column(SQLEnum(EmployeeStatus), nullable=False, default=EmployeeStatus.ATIVO)
 
-    # Dados Pessoais
-    data_nascimento = Column(Date)
-    telefone = Column(String(20))
-    endereco = Column(String(500))
+    # Chaves Estrangeiras
+    area_id = Column(UUID(as_uuid=True), ForeignKey("areas.id"), nullable=True)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
+    manager_id = Column(UUID(as_uuid=True), ForeignKey("managers.id"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=True)
 
-    # Dados Profissionais
-    cargo = Column(String(255), nullable=False)
-    data_admissao = Column(Date)
-    salario = Column(Numeric(10, 2))
+    # Datas de Acompanhamento (Simplificado conforme PRD)
+    data_proximo_pdi = Column(Date, nullable=True)
+    data_ultima_1x1 = Column(Date, nullable=True)
+    data_proxima_1x1 = Column(Date, nullable=True)
 
-    # Relacionamentos
-    team_id = Column(Integer, ForeignKey("teams.id", ondelete="SET NULL"))
-    manager_id = Column(Integer, ForeignKey("managers.id", ondelete="SET NULL"))
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-
-    # Gestão de RH (JSON para flexibilidade)
-    ferias_dados = Column(JSON, default=dict)  # {"dias_disponiveis": 30, "periodos": [...]}
-    pdi_dados = Column(JSON, default=dict)     # {"checks": [...], "objetivos": [...]}
-    reunioes_1x1 = Column(JSON, default=dict)  # {"historico": [...], "proxima": "..."}
-
-    # Datas importantes
-    data_proximo_pdi = Column(Date)
-    data_proxima_1x1 = Column(Date)
-    data_ultima_avaliacao = Column(Date)
-    day_off_aniversario = Column(Date)
-
-    # Status e observações
-    status = Column(String(50), nullable=False, default="ATIVO", index=True)
-    # Status: ATIVO, FERIAS, AFASTADO, DESLIGADO
-    observacoes = Column(Text)
+    # Dados de Férias (JSONB para flexibilidade, como no PRD)
+    ferias_dados = Column(JSONB, nullable=True, 
+                          default=lambda: {"periodos_agendados": [], "dias_disponiveis": 30, "vencimento_proximo_periodo": None})
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relacionamentos ORM
-    team = relationship("Team", back_populates="members", foreign_keys=[team_id])
-    manager = relationship("Manager", back_populates="subordinados", foreign_keys=[manager_id])
+    # Relacionamentos
     user = relationship("User", back_populates="employee", uselist=False)
-    conhecimentos = relationship("EmployeeKnowledge", back_populates="employee", cascade="all, delete-orphan")
+    area = relationship("Area", back_populates="employees")
+    team = relationship("Team", back_populates="employees")
+    manager = relationship("Manager", back_populates="employees_managed", foreign_keys=[manager_id])
+    
+    # MUDANÇA: Removido o relacionamento abaixo, pois deletamos o app/models/pdi.py
+    # pdi = relationship("PDI", back_populates="employee")
+    
+    # MUDANÇA: Removido o relacionamento abaixo, pois deletamos o app/models/one_to_one.py
+    # one_to_one = relationship("OneToOne", back_populates="employee")
 
-    def __repr__(self):
-        return f"<Employee(id={self.id}, nome='{self.nome}', cargo='{self.cargo}')>"
+    # Relacionamento 1:1 reverso para Manager (se este funcionário for um gerente)
+    manager_profile = relationship("Manager", back_populates="employee", uselist=False, foreign_keys="[Manager.employee_id]")
 
-    def to_dict(self):
-        """Converte o model para dicionário"""
-        return {
-            "id": self.id,
-            "nome": self.nome,
-            "email": self.email,
-            "cpf": self.cpf,
-            "data_nascimento": self.data_nascimento.isoformat() if self.data_nascimento else None,
-            "telefone": self.telefone,
-            "endereco": self.endereco,
-            "cargo": self.cargo,
-            "data_admissao": self.data_admissao.isoformat() if self.data_admissao else None,
-            "salario": float(self.salario) if self.salario else None,
-            "team_id": self.team_id,
-            "manager_id": self.manager_id,
-            "ferias_dados": self.ferias_dados,
-            "pdi_dados": self.pdi_dados,
-            "reunioes_1x1": self.reunioes_1x1,
-            "data_proximo_pdi": self.data_proximo_pdi.isoformat() if self.data_proximo_pdi else None,
-            "data_proxima_1x1": self.data_proxima_1x1.isoformat() if self.data_proxima_1x1 else None,
-            "data_ultima_avaliacao": self.data_ultima_avaliacao.isoformat() if self.data_ultima_avaliacao else None,
-            "day_off_aniversario": self.day_off_aniversario.isoformat() if self.day_off_aniversario else None,
-            "status": self.status,
-            "observacoes": self.observacoes,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }

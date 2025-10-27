@@ -1,0 +1,68 @@
+from fastapi import APIRouter, HTTPException, Depends, Query
+from sqlalchemy.orm import Session, joinedload
+from typing import Optional, List
+from datetime import datetime
+
+from app.database import get_db
+from app.models.one_to_one import OneToOne
+from app.models.employee import Employee
+from app.models.manager import Manager
+from app.core.security import get_current_user
+from app.models.user import User
+
+router = APIRouter(prefix="/one-to-one", tags=["1x1"])
+
+
+@router.get("", response_model=List[dict])
+async def list_one_to_one_records(
+        employee_id: Optional[int] = Query(None),
+        realizada: Optional[bool] = Query(None),
+        skip: int = 0,
+        limit: int = 100,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Lista registros de 1:1"""
+    query = db.query(OneToOne).options(
+        joinedload(OneToOne.employee),
+        joinedload(OneToOne.manager)
+    )
+
+    if employee_id:
+        query = query.filter(OneToOne.employee_id == employee_id)
+
+    if realizada is not None:
+        query = query.filter(OneToOne.realizada == realizada)
+
+    meetings = query.order_by(OneToOne.data_reuniao.desc()).offset(skip).limit(limit).all()
+
+    return {
+        "data": [
+            {
+                **meeting.to_dict(),
+                "employee_nome": meeting.employee.nome if meeting.employee else None
+            }
+            for meeting in meetings
+        ],
+        "total": query.count()
+    }
+
+
+@router.post("")
+async def create_one_to_one_record(
+        meeting_data: dict,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Cria registro de 1:1"""
+    new_meeting = OneToOne(
+        employee_id=meeting_data['employee_id'],
+        manager_id=meeting_data['manager_id'],
+        titulo=meeting_data.get('titulo'),
+        data_reuniao=meeting_data.get('data_reuniao', datetime.now()),
+        duracao_minutos=meeting_data.get('duracao_minutos', 30),
+        pauta=meeting_data.get('pauta'),
+        realizada=False
+    )
+
+    db.add(new_meeting)

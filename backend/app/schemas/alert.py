@@ -1,0 +1,48 @@
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
+from datetime import datetime
+from enum import Enum
+
+class AlertType(str, Enum):
+    certification_expiring = "certification_expiring"
+    certification_expired = "certification_expired"
+    vacation_pending = "vacation_pending"
+    birthday = "birthday"
+    pdi_deadline = "pdi_deadline"
+    one_on_one_scheduled = "one_on_one_scheduled"
+    document_missing = "document_missing"
+    system = "system"
+
+class AlertPriority(str, Enum):
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+    info = "info"
+
+class AlertBase(BaseModel):
+    type: AlertType
+    priority: AlertPriority
+    title: str
+    message: str
+    employee_id: Optional[str] = None
+    employee_name: Optional[str]
+    related_id: Optional[int]
+    related_type: Optional[str]
+    is_read: bool = False
+    expires_at: Optional[datetime]
+    action_url: Optional[str]
+    metadata: Optional[Dict[str, Any]]
+
+class AlertCreate(AlertBase):
+    pass
+
+class AlertUpdate(BaseModel):
+    is_read: Optional[bool] = None
+
+class AlertResponse(AlertBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

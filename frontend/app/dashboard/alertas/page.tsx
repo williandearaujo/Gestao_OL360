@@ -1,7 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Bell, AlertCircle, CheckCircle, Clock, AlertTriangle, Info, X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Bell, CheckCircle, AlertCircle, AlertTriangle, Clock, Info, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+
+import OLCardStats from '@/components/ui/OLCardStats'
+import OLButton from '@/components/ui/OLButton'
+import OLModal from '@/components/ui/OLModal'
 
 type AlertType =
   | 'certification_expiring'
@@ -21,7 +26,6 @@ interface Alert {
   priority: AlertPriority
   title: string
   message: string
-  employee_id?: number
   employee_name?: string
   is_read: boolean
   created_at: string
@@ -29,22 +33,60 @@ interface Alert {
   metadata?: Record<string, any>
 }
 
+function getPriorityColor(priority: AlertPriority) {
+  const colors = {
+    critical: 'border-red-600 bg-red-100 text-red-700',
+    high: 'border-orange-600 bg-orange-100 text-orange-700',
+    medium: 'border-yellow-600 bg-yellow-100 text-yellow-700',
+    low: 'border-blue-600 bg-blue-100 text-blue-700',
+    info: 'border-gray-600 bg-gray-100 text-gray-700'
+  }
+  return colors[priority]
+}
+
+function getPriorityIcon(priority: AlertPriority) {
+  const icons = {
+    critical: <AlertCircle className="w-5 h-5" />,
+    high: <AlertTriangle className="w-5 h-5" />,
+    medium: <Clock className="w-5 h-5" />,
+    low: <Info className="w-5 h-5" />,
+    info: <Bell className="w-5 h-5" />
+  }
+  return icons[priority]
+}
+
+function getTypeLabel(type: AlertType) {
+  const labels = {
+    certification_expiring: '📜 Certificação Vencendo',
+    certification_expired: '❌ Certificação Vencida',
+    vacation_pending: '🏖️ Férias Pendentes',
+    birthday: '🎂 Aniversário',
+    pdi_deadline: '📋 PDI',
+    one_on_one_scheduled: '💬 Reunião 1:1',
+    document_missing: '📄 Documento',
+    system: '⚙️ Sistema'
+  }
+  return labels[type]
+}
+
 export default function AlertasPage() {
+  const router = useRouter()
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [priorityFilter, setPriorityFilter] = useState<AlertPriority | 'all'>('all')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchAlerts()
   }, [filter, priorityFilter])
 
-  const fetchAlerts = async () => {
+  async function fetchAlerts() {
     try {
       setLoading(true)
       setError(null)
-
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
@@ -53,41 +95,57 @@ export default function AlertasPage() {
       if (priorityFilter !== 'all') url += `priority=${priorityFilter}&`
 
       const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       })
 
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}: Não foi possível carregar alertas`)
-      }
+      if (!response.ok) throw new Error('Erro ao carregar alertas')
 
       const data = await response.json()
       const alertsData = data.data || data
 
       setAlerts(Array.isArray(alertsData) ? alertsData : [])
-      console.log('✅ Alertas carregados:', alertsData.length)
-
-    } catch (err: any) {
-      console.error('❌ Erro ao buscar alertas:', err)
-      setError(err.message)
+    } catch (e: any) {
+      setError(e.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const markAsRead = async (alertId: number) => {
+  function confirmDelete(id: number) {
+    setDeleteId(id)
+    setModalOpen(true)
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${API_URL}/alerts/${deleteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) throw new Error('Falha ao excluir alerta')
+
+      setDeleteId(null)
+      setModalOpen(false)
+      await fetchAlerts()
+    } catch (err: any) {
+      alert(err.message)
+    }
+  }
+
+  async function markAsRead(alertId: number) {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
       const response = await fetch(`${API_URL}/alerts/${alertId}/read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       })
 
       if (response.ok) {
@@ -96,282 +154,125 @@ export default function AlertasPage() {
         ))
       }
     } catch (err) {
-      console.error('Erro ao marcar como lido:', err)
+      alert('Erro ao marcar alerta como lido')
     }
   }
 
-  const deleteAlert = async (alertId: number) => {
-    try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const token = localStorage.getItem('token')
-
-      const response = await fetch(`${API_URL}/alerts/${alertId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        setAlerts(alerts.filter(alert => alert.id !== alertId))
-      }
-    } catch (err) {
-      console.error('Erro ao deletar alerta:', err)
-    }
-  }
-
-  const markAllAsRead = async () => {
+  async function markAllAsRead() {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const token = localStorage.getItem('token')
 
       const response = await fetch(`${API_URL}/alerts/read-all`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       })
 
       if (response.ok) {
-        setAlerts(alerts.map(alert => ({ ...alert, is_read: true })))
+        await fetchAlerts()
       }
     } catch (err) {
-      console.error('Erro ao marcar todos como lidos:', err)
+      alert('Erro ao marcar todos alertas como lidos')
     }
-  }
-
-  const getPriorityColor = (priority: AlertPriority) => {
-    const colors = {
-      critical: 'bg-red-100 text-red-800 border-red-300',
-      high: 'bg-orange-100 text-orange-800 border-orange-300',
-      medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      low: 'bg-blue-100 text-blue-800 border-blue-300',
-      info: 'bg-gray-100 text-gray-800 border-gray-300'
-    }
-    return colors[priority]
-  }
-
-  const getPriorityIcon = (priority: AlertPriority) => {
-    const icons = {
-      critical: <AlertCircle className="w-5 h-5" />,
-      high: <AlertTriangle className="w-5 h-5" />,
-      medium: <Clock className="w-5 h-5" />,
-      low: <Info className="w-5 h-5" />,
-      info: <Bell className="w-5 h-5" />
-    }
-    return icons[priority]
-  }
-
-  const getTypeLabel = (type: AlertType) => {
-    const labels = {
-      certification_expiring: '📜 Certificação Vencendo',
-      certification_expired: '❌ Certificação Vencida',
-      vacation_pending: '🏖️ Férias Pendentes',
-      birthday: '🎂 Aniversário',
-      pdi_deadline: '📋 PDI',
-      one_on_one_scheduled: '💬 Reunião 1:1',
-      document_missing: '📄 Documento',
-      system: '⚙️ Sistema'
-    }
-    return labels[type]
   }
 
   const unreadCount = alerts.filter(a => !a.is_read).length
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg p-6">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-red-800 mb-2">❌ Erro ao carregar alertas</h2>
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={fetchAlerts}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Tentar Novamente
-            </button>
+          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg border border-ol-border dark:border-darkOl-border rounded-lg p-6">
+            <h2 className="text-xl font-bold text-ol-error dark:text-darkOl-error mb-2">❌ Erro ao carregar alertas</h2>
+            <p className="text-ol-text dark:text-darkOl-text mb-4">{error}</p>
+            <div className="flex gap-3">
+              <OLButton variant="danger" onClick={fetchAlerts}>Tentar Novamente</OLButton>
+              <OLButton variant="outline" onClick={() => router.push("/dashboard")}>Voltar ao Dashboard</OLButton>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Bell className="w-8 h-8 text-blue-600" />
-              Central de Alertas
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              {loading ? 'Carregando...' : `${unreadCount} alerta${unreadCount !== 1 ? 's' : ''} não lido${unreadCount !== 1 ? 's' : ''}`}
-            </p>
-          </div>
-
-          <button
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0 || loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Marcar Todos como Lidos
-          </button>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-ol-primary mx-auto mb-4"></div>
+          <p className="text-ol-text dark:text-darkOl-text">Carregando alertas...</p>
         </div>
       </div>
+    )
+  }
 
-      {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg ${
-                filter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setFilter('unread')}
-              className={`px-4 py-2 rounded-lg ${
-                filter === 'unread'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Não Lidos ({unreadCount})
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            {(['all', 'critical', 'high', 'medium', 'low'] as const).map(priority => (
-              <button
-                key={priority}
-                onClick={() => setPriorityFilter(priority)}
-                className={`px-3 py-2 rounded-lg text-sm ${
-                  priorityFilter === priority
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {priority === 'all' ? 'Todas' : priority === 'critical' ? 'Crítico' :
-                 priority === 'high' ? 'Alto' : priority === 'medium' ? 'Médio' : 'Baixo'}
-              </button>
-            ))}
-          </div>
+  return (
+    <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg p-6">
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-ol-primary dark:text-darkOl-primary flex items-center gap-3">
+            <Bell className="w-8 h-8 text-ol-primary dark:text-darkOl-primary" />
+            Central de Alertas
+          </h1>
+          <p className="text-ol-grayMedium dark:text-darkOl-grayMedium mt-2">
+            {unreadCount} alerta{unreadCount !== 1 ? 's' : ''} não lido{unreadCount !== 1 ? 's' : ''}
+          </p>
         </div>
+
+        <OLButton variant="primary" onClick={markAllAsRead} disabled={unreadCount === 0}>
+          <CheckCircle className="w-5 h-5 mr-2" />
+          Marcar Todos como Lidos
+        </OLButton>
+      </div>
+
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <OLCardStats label="Total" value={alerts.length} icon={<Bell />} color="info" />
+        <OLCardStats label="Não Lidos" value={unreadCount} icon={<Bell />} color="warning" />
+        <OLCardStats label="Críticos" value={alerts.filter(a => a.priority === 'critical').length} icon={<AlertCircle />} color="danger" />
+        <OLCardStats label="Altos" value={alerts.filter(a => a.priority === 'high').length} icon={<AlertTriangle />} color="warning" />
       </div>
 
       {/* Lista de Alertas */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4">Carregando alertas...</p>
-        </div>
-      ) : alerts.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Nenhum alerta encontrado
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Você está em dia com todas as suas notificações!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {alerts.map(alert => {
-            const statusBadge = getPriorityColor(alert.priority)
-            const icon = getPriorityIcon(alert.priority)
-
-            return (
-              <div
-                key={alert.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border-l-4 ${
-                  !alert.is_read ? 'border-l-blue-600 bg-blue-50 dark:bg-blue-900/10' : 'border-l-gray-300'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border ${statusBadge}`}>
-                        {icon}
-                        {alert.priority.toUpperCase()}
-                      </span>
-
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {getTypeLabel(alert.type)}
-                      </span>
-
-                      {!alert.is_read && (
-                        <span className="px-2 py-1 bg-blue-600 text-white rounded-full text-xs font-semibold">
-                          NOVO
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                      {alert.title}
-                    </h3>
-
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      {alert.message}
-                    </p>
-
-                    {alert.employee_name && (
-                      <p className="text-sm text-gray-500">
-                        👤 {alert.employee_name}
-                      </p>
-                    )}
-
-                    <p className="text-xs text-gray-400 mt-2">
-                      {new Date(alert.created_at).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2 ml-4">
-                    {!alert.is_read && (
-                      <button
-                        onClick={() => markAsRead(alert.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg"
-                        title="Marcar como lido"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => deleteAlert(alert.id)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
-                      title="Excluir alerta"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {alert.action_url && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <a
-                      href={alert.action_url}
-                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Ver detalhes →
-                    </a>
-                  </div>
-                )}
+      <div className="bg-ol-cardBg dark:bg-darkOl-cardBg rounded-lg shadow-sm overflow-hidden border border-ol-border dark:border-darkOl-border">
+        {alerts.length === 0 ? (
+          <div className="p-12 text-center text-ol-text dark:text-darkOl-text text-lg font-semibold">Nenhum alerta encontrado</div>
+        ) : (
+          alerts.map(alert => (
+            <div key={alert.id} className={`p-4 border-b last:border-b-0 cursor-pointer hover:bg-ol-grayLight dark:hover:bg-darkOl-grayLight flex justify-between items-center ${!alert.is_read ? 'bg-ol-bg dark:bg-darkOl-bg font-semibold' : ''}`}>
+              <div>
+                <h4 className="text-ol-primary dark:text-darkOl-primary">{alert.title}</h4>
+                <p className="text-ol-grayMedium dark:text-darkOl-grayMedium text-sm">{alert.message}</p>
+                {alert.employee_name && <p className="text-ol-grayMedium dark:text-darkOl-grayMedium text-xs mt-1">👤 {alert.employee_name}</p>}
               </div>
-            )
-          })}
-        </div>
-      )}
+              <div className="flex items-center gap-2">
+                {!alert.is_read && (
+                  <button onClick={() => markAsRead(alert.id)} className="text-teal-600 hover:underline" title="Marcar como lido">
+                    <CheckCircle className="w-5 h-5" />
+                  </button>
+                )}
+                <button onClick={() => confirmDelete(alert.id)} className="text-red-600 hover:underline" title="Excluir alerta">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal confirmação */}
+      <OLModal
+        open={deleteId !== null}
+        title="Confirmar exclusão"
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variantConfirm="danger"
+      >
+        <p>Tem certeza que deseja excluir este alerta?</p>
+      </OLModal>
     </div>
   )
 }
