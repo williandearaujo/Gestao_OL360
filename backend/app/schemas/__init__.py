@@ -36,23 +36,10 @@ from .employee_knowledge import (
     EmployeeKnowledgeResponse,
     EmployeeKnowledgeDetail,
     EmployeeKnowledgeStats,
+    EmployeeKnowledgeFilter,
 )
 
-from .knowledge import (
-    KnowledgeTypeEnum,
-    KnowledgeLevelEnum,
-    KnowledgeStatusEnum,
-    KnowledgeBase,
-    KnowledgeCreate,
-    KnowledgeUpdate,
-    KnowledgeResponse,
-    KnowledgeDetail,
-    KnowledgeStats,
-    KnowledgeFilter,
-    EmployeeKnowledgeFilter,
-    LearningPath,
-    CertificationAlert,
-)
+from .knowledge import KnowledgeBase, KnowledgeCreate, KnowledgeUpdate, KnowledgeResponse, KnowledgeSummary
 
 from .organization import (
     AreaBase,

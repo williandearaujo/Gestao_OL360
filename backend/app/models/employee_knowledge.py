@@ -40,11 +40,13 @@ class EmployeeKnowledge(Base):
     knowledge = relationship("Knowledge", back_populates="vinculos")
 
     def to_dict(self):
+        """Serializa o vínculo para respostas JSON."""
+        status_value = self.status.value if isinstance(self.status, enum.Enum) else self.status
         return {
             "id": str(self.id),
             "employee_id": str(self.employee_id),
             "knowledge_id": str(self.knowledge_id),
-            "status": self.status.value if isinstance(self.status, enum.Enum) else self.status,
+            "status": status_value,
             "progresso": self.progresso,
             "data_inicio": self.data_inicio.isoformat() if self.data_inicio else None,
             "data_limite": self.data_limite.isoformat() if self.data_limite else None,
@@ -54,6 +56,11 @@ class EmployeeKnowledge(Base):
             "observacoes": self.observacoes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "employee_nome": self.employee.nome if self.employee else None,
+            "employee_nome": self.employee.nome_completo if self.employee else None,
+            "employee_cargo": self.employee.cargo if self.employee else None,
             "knowledge_nome": self.knowledge.nome if self.knowledge else None,
+            "knowledge_tipo": (
+                self.knowledge.tipo.value if self.knowledge and isinstance(self.knowledge.tipo, enum.Enum)
+                else (self.knowledge.tipo if self.knowledge else None)
+            ),
         }

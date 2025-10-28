@@ -2,12 +2,16 @@
 
 import React from 'react';
 
-// Define a interface para os dados do colaborador que o componente espera
+import { formatCurrency, formatStatus } from '@/lib/format';
+
 interface EmployeeData {
   nome_completo: string;
   email_corporativo: string;
   email_pessoal?: string | null;
+  telefone_corporativo?: string | null;
   telefone_pessoal?: string | null;
+  contato_emergencia_nome?: string | null;
+  contato_emergencia_telefone?: string | null;
   data_nascimento?: string | null;
   data_admissao: string;
   cpf?: string | null;
@@ -16,77 +20,93 @@ interface EmployeeData {
   cargo?: string | null;
   senioridade?: string | null;
   status?: string | null;
+  tipo_cadastro?: string | null;
+  salario_atual?: number | null;
+  ultima_alteracao_salarial?: string | null;
+  observacoes_internas?: string | null;
 }
 
 interface EmployeeDetailsTabProps {
   employee: EmployeeData;
 }
 
-// Componente para renderizar um campo de detalhe, agora com melhor espaçamento
 const DetailField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
     <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</dt>
-    <dd className="mt-1 text-sm text-ol-text dark:text-darkOl-text sm:mt-0 sm:col-span-2">{value || 'Não informado'}</dd>
+    <dd className="mt-1 text-sm text-ol-text dark:text-darkOl-text sm:col-span-2 sm:mt-0">
+      {value ?? 'Nao informado'}
+    </dd>
   </div>
 );
 
-// Componente principal da aba de detalhes, agora com layout de cartões
 const EmployeeDetailsTab: React.FC<EmployeeDetailsTabProps> = ({ employee }) => {
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+  const formatDate = (value?: string | null) => {
+    if (!value) return null;
+    return new Date(value).toLocaleDateString('pt-BR');
   };
 
+  const tipoCadastroLabel = employee.tipo_cadastro
+    ? formatStatus(employee.tipo_cadastro)
+    : null;
+
   return (
-    <div className="animate-fadeIn space-y-6">
-      
-      {/* Card: Informações Pessoais */}
-      <div className="bg-ol-cardBg dark:bg-darkOl-cardBg border border-ol-border dark:border-darkOl-border rounded-lg shadow-sm">
+    <div className="space-y-6">
+      <div className="rounded-lg border border-ol-border bg-ol-cardBg shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
         <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-ol-text dark:text-darkOl-text">
-            Informações Pessoais
-          </h3>
+          <h3 className="text-lg font-medium text-ol-text dark:text-darkOl-text">Informacoes pessoais</h3>
         </div>
-        <div className="border-t border-ol-border dark:border-darkOl-border px-4 py-5 sm:p-0">
+        <div className="border-t border-ol-border px-4 py-5 dark:border-darkOl-border sm:p-0">
           <dl className="sm:divide-y sm:divide-gray-200 dark:sm:divide-gray-700">
             <div className="sm:px-6">
-              <DetailField label="Nome Completo" value={employee.nome_completo} />
-              <DetailField label="E-mail Pessoal" value={employee.email_pessoal} />
-              <DetailField label="Telefone Pessoal" value={employee.telefone_pessoal} />
-              <DetailField label="Data de Nascimento" value={formatDate(employee.data_nascimento)} />
+              <DetailField label="Nome completo" value={employee.nome_completo} />
+              <DetailField label="E-mail pessoal" value={employee.email_pessoal} />
+              <DetailField label="Telefone pessoal" value={employee.telefone_pessoal} />
+              <DetailField label="Telefone corporativo" value={employee.telefone_corporativo} />
+              <DetailField label="Contato de emergencia" value={employee.contato_emergencia_nome} />
+              <DetailField
+                label="Telefone de emergencia"
+                value={employee.contato_emergencia_telefone}
+              />
+              <DetailField label="Data de nascimento" value={formatDate(employee.data_nascimento)} />
+              <DetailField label="Endereco" value={employee.endereco_completo} />
             </div>
           </dl>
         </div>
       </div>
 
-      {/* Card: Dados Corporativos */}
-      <div className="bg-ol-cardBg dark:bg-darkOl-cardBg border border-ol-border dark:border-darkOl-border rounded-lg shadow-sm">
+      <div className="rounded-lg border border-ol-border bg-ol-cardBg shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
         <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-ol-text dark:text-darkOl-text">
-            Dados Corporativos
-          </h3>
+          <h3 className="text-lg font-medium text-ol-text dark:text-darkOl-text">Dados corporativos</h3>
         </div>
-        <div className="border-t border-ol-border dark:border-darkOl-border px-4 py-5 sm:p-0">
+        <div className="border-t border-ol-border px-4 py-5 dark:border-darkOl-border sm:p-0">
           <dl className="sm:divide-y sm:divide-gray-200 dark:sm:divide-gray-700">
             <div className="sm:px-6">
-              <DetailField label="E-mail Corporativo" value={employee.email_corporativo} />
+              <DetailField label="E-mail corporativo" value={employee.email_corporativo} />
               <DetailField label="Cargo" value={employee.cargo} />
               <DetailField label="Senioridade" value={employee.senioridade} />
-              <DetailField label="Data de Admissão" value={formatDate(employee.data_admissao)} />
-              <DetailField label="Status" value={employee.status} />
+              <DetailField label="Tipo de cadastro" value={tipoCadastroLabel} />
+              <DetailField label="Data de admissao" value={formatDate(employee.data_admissao)} />
+              <DetailField label="Status" value={formatStatus(employee.status || '')} />
+              <DetailField
+                label="Salario atual"
+                value={
+                  employee.salario_atual != null ? formatCurrency(employee.salario_atual) : null
+                }
+              />
+              <DetailField
+                label="Ultimo reajuste"
+                value={formatDate(employee.ultima_alteracao_salarial)}
+              />
             </div>
           </dl>
         </div>
       </div>
 
-      {/* Card: Documentos */}
-      <div className="bg-ol-cardBg dark:bg-darkOl-cardBg border border-ol-border dark:border-darkOl-border rounded-lg shadow-sm">
+      <div className="rounded-lg border border-ol-border bg-ol-cardBg shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
         <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-ol-text dark:text-darkOl-text">
-            Documentos
-          </h3>
+          <h3 className="text-lg font-medium text-ol-text dark:text-darkOl-text">Documentos</h3>
         </div>
-        <div className="border-t border-ol-border dark:border-darkOl-border px-4 py-5 sm:p-0">
+        <div className="border-t border-ol-border px-4 py-5 dark:border-darkOl-border sm:p-0">
           <dl className="sm:divide-y sm:divide-gray-200 dark:sm:divide-gray-700">
             <div className="sm:px-6">
               <DetailField label="CPF" value={employee.cpf} />
@@ -96,6 +116,12 @@ const EmployeeDetailsTab: React.FC<EmployeeDetailsTabProps> = ({ employee }) => 
         </div>
       </div>
 
+      <div className="rounded-lg border border-dashed border-ol-border bg-white p-6 shadow-sm dark:border-darkOl-border dark:bg-darkOl-cardBg">
+        <h3 className="text-lg font-medium text-ol-text dark:text-darkOl-text">Observacoes internas</h3>
+        <p className="mt-3 text-sm text-ol-grayMedium dark:text-darkOl-grayMedium">
+          {employee.observacoes_internas?.trim() || 'Nenhuma observacao cadastrada.'}
+        </p>
+      </div>
     </div>
   );
 };

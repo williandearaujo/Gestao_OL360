@@ -1,9 +1,18 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, Numeric, Boolean, DateTime
+import enum
+from sqlalchemy import Column, String, Integer, Text, Numeric, Boolean, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
+
+
+class KnowledgeCategoryEnum(str, enum.Enum):
+    CERTIFICACAO = "CERTIFICACAO"
+    CURSO = "CURSO"
+    IDIOMA = "IDIOMA"
+    FORMACAO = "FORMACAO"
+
 
 class Knowledge(Base):
     __tablename__ = "knowledge"
@@ -11,8 +20,11 @@ class Knowledge(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     nome = Column(String(255), nullable=False, index=True)
     descricao = Column(Text)
-    tipo = Column(String(50), nullable=False, default="CURSO", index=True)
+    tipo = Column(Enum(KnowledgeCategoryEnum, name="knowledge_category_enum"), nullable=False, default=KnowledgeCategoryEnum.CURSO, index=True)
     fornecedor = Column(String(255), index=True)
+    codigo_certificacao = Column(String(120), nullable=True)
+    orgao_certificador = Column(String(120), nullable=True)
+    tipo_formacao = Column(String(80), nullable=True)
     area = Column(String(100), index=True)
     dificuldade = Column(String(20), nullable=False, default="MEDIO")
     carga_horaria = Column(Integer)

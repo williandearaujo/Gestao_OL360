@@ -1,108 +1,157 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional
+from __future__ import annotations
+
 from datetime import date, datetime
+from typing import Optional
 from uuid import UUID
-from enum import Enum
 
+from pydantic import BaseModel, Field, validator
 
-class KnowledgeLevelEnum(str, Enum):
-    BASICO = "BASICO"
-    INTERMEDIARIO = "INTERMEDIARIO"
-    AVANCADO = "AVANCADO"
-    ESPECIALISTA = "ESPECIALISTA"
-
-
+from app.models.employee_knowledge import StatusEnum as KnowledgeLinkStatus
 
 
 class EmployeeKnowledgeBase(BaseModel):
-    """Schema base para vínculo colaborador-conhecimento"""
-    employee_id: UUID = Field(..., description="ID do colaborador")
-    knowledge_id: UUID = Field(..., description="ID do conhecimento")
-    nivel_obtido: KnowledgeLevelEnum = Field(..., description="Nível obtido pelo colaborador")
+    """Base attributes shared by create and update payloads."""
+
+    employee_id: UUID = Field(..., description="Employee identifier")
+    knowledge_id: UUID = Field(..., description="Knowledge identifier")
+    status: KnowledgeLinkStatus = Field(
+        default=KnowledgeLinkStatus.DESEJADO,
+        description="Current status for the employee knowledge record",
+    )
+    progresso: Optional[float] = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Progress percentage achieved by the employee",
+    )
+    data_inicio: Optional[date] = Field(
+        default=None,
+        description="Planned start date for the learning plan",
+    )
+    data_limite: Optional[date] = Field(
+        default=None,
+        description="Target date to complete the plan",
+    )
+    data_obtencao: Optional[date] = Field(
+        default=None,
+        description="Date when the knowledge was obtained",
+    )
+    certificado_url: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="URL of the certificate asset",
+    )
+    observacoes: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Free form notes about the record",
+    )
 
     class Config:
         from_attributes = True
         use_enum_values = True
+
+    @validator("data_limite")
+    def validate_data_limite(cls, value, values):
+        inicio = values.get("data_inicio")
+        if value and inicio and value < inicio:
+            raise ValueError("Target date must be after or equal to start date")
+        return value
 
 
 class EmployeeKnowledgeCreate(EmployeeKnowledgeBase):
-    """Schema para criação de vínculo"""
-    data_obtencao: date = Field(default_factory=date.today, description="Data de obtenção")
-    data_expiracao: Optional[date] = Field(None, description="Data de validade (se aplicável)")
-    certificado_url: Optional[str] = Field(None, max_length=500, description="URL do certificado")
-    observacoes: Optional[str] = Field(None, max_length=500, description="Observações")
+    """Payload used when creating a new employee knowledge record."""
 
-    @validator('data_expiracao')
-    def validate_expiration_date(cls, v, values):
-        """Valida se data de validade é posterior à data de obtenção"""
-        if v and 'data_obtencao' in values and v <= values['data_obtencao']:
-            raise ValueError('Data de validade deve ser posterior à data de obtenção')
-        return v
+    data_expiracao: Optional[date] = Field(
+        default=None,
+        description="Expiration date for certifications (optional)",
+    )
+
+    @validator("data_expiracao")
+    def validate_data_expiracao(cls, value, values):
+        data_obtencao = values.get("data_obtencao")
+        if value and data_obtencao and value <= data_obtencao:
+            raise ValueError("Expiration must be after the obtained date")
+        return value
 
 
 class EmployeeKnowledgeUpdate(BaseModel):
-    """Schema para atualização de vínculo"""
-    nivel_obtido: Optional[KnowledgeLevelEnum] = None
+    """Payload used to partially update a record."""
+
+    status: Optional[KnowledgeLinkStatus] = None
+    progresso: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    data_inicio: Optional[date] = None
+    data_limite: Optional[date] = None
     data_obtencao: Optional[date] = None
     data_expiracao: Optional[date] = None
-    certificado_url: Optional[str] = Field(None, max_length=500)
-    observacoes: Optional[str] = Field(None, max_length=500)
-    status: Optional[str] = None
+    certificado_url: Optional[str] = Field(default=None, max_length=500)
+    observacoes: Optional[str] = Field(default=None, max_length=2000)
+
+    class Config:
+        from_attributes = True
+        use_enum_values = True
+
+    @validator("data_limite")
+    def validate_data_limite(cls, value, values):
+        inicio = values.get("data_inicio")
+        if value and inicio and value < inicio:
+            raise ValueError("Target date must be after or equal to start date")
+        return value
+
+    @validator("data_expiracao")
+    def validate_data_expiracao(cls, value, values):
+        data_obtencao = values.get("data_obtencao")
+        if value and data_obtencao and value <= data_obtencao:
+            raise ValueError("Expiration must be after the obtained date")
+        return value
+
+
+class EmployeeKnowledgeResponse(EmployeeKnowledgeBase):
+    """Default response returned by the API."""
+
+    id: UUID
+    data_expiracao: Optional[date] = None
+    dias_para_expirar: Optional[int] = None
+    vencido: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    employee_nome: Optional[str] = None
+    knowledge_nome: Optional[str] = None
 
     class Config:
         from_attributes = True
         use_enum_values = True
 
 
-class EmployeeKnowledgeResponse(EmployeeKnowledgeBase):
-    """Schema para resposta de vínculo"""
-    id: UUID
-    data_obtencao: date
-    data_expiracao: Optional[date] = None
-    certificado_url: Optional[str] = None
-    status: str = "ATIVO"
-    dias_para_vencer: Optional[int] = None
-    vencido: bool = False
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
 class EmployeeKnowledgeDetail(EmployeeKnowledgeResponse):
-    """Schema detalhado de vínculo com informações do conhecimento e colaborador"""
-    knowledge_name: str
-    knowledge_type: str
-    employee_name: str
-    employee_cargo: str
-    observacoes: Optional[str] = None
+    """Detailed response returned by the API."""
 
-    class Config:
-        from_attributes = True
+    knowledge_tipo: Optional[str] = None
+    employee_cargo: Optional[str] = None
 
 
 class EmployeeKnowledgeStats(BaseModel):
-    """Estatísticas de conhecimentos de um colaborador"""
+    """Aggregate indicators about the employee knowledge portfolio."""
+
     employee_id: UUID
-    employee_name: str
-    total_knowledge: int
-    by_type: dict
-    by_level: dict
-    certifications_count: int
-    expiring_soon: int
-    completion_rate: float
+    employee_nome: str
+    total: int
+    por_status: dict
+    expiram_em_breve: int
+    expirados: int
+    progresso_medio: Optional[float] = None
 
     class Config:
         from_attributes = True
 
+
 class EmployeeKnowledgeFilter(BaseModel):
+    """Accepted filters for list endpoints."""
+
     employee_id: Optional[UUID] = None
     knowledge_id: Optional[UUID] = None
-    nivel_obtido: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[KnowledgeLinkStatus] = None
     vencido: Optional[bool] = None
-    vence_em_dias: Optional[int] = None
 
     class Config:
         from_attributes = True

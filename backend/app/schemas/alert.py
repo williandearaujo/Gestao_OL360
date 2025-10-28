@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -8,6 +8,7 @@ class AlertType(str, Enum):
     certification_expired = "certification_expired"
     vacation_pending = "vacation_pending"
     birthday = "birthday"
+    work_anniversary = "work_anniversary"
     pdi_deadline = "pdi_deadline"
     one_on_one_scheduled = "one_on_one_scheduled"
     document_missing = "document_missing"
@@ -26,13 +27,13 @@ class AlertBase(BaseModel):
     title: str
     message: str
     employee_id: Optional[str] = None
-    employee_name: Optional[str]
-    related_id: Optional[int]
-    related_type: Optional[str]
+    employee_name: Optional[str] = None
+    related_id: Optional[int] = None
+    related_type: Optional[str] = None
     is_read: bool = False
-    expires_at: Optional[datetime]
-    action_url: Optional[str]
-    metadata: Optional[Dict[str, Any]]
+    expires_at: Optional[datetime] = None
+    action_url: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = Field(default=None, alias="meta_data")
 
 class AlertCreate(AlertBase):
     pass
@@ -46,3 +47,4 @@ class AlertResponse(AlertBase):
 
     class Config:
         orm_mode = True
+        allow_population_by_field_name = True

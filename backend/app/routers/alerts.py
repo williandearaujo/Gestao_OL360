@@ -8,6 +8,7 @@ from app.models.alert import Alert, AlertTypeEnum, AlertPriorityEnum
 from app.schemas.alert import AlertCreate, AlertUpdate, AlertResponse
 from app.core.security import get_current_user
 from app.models.user import User
+from app.services.alert_service import AlertService
 
 router = APIRouter(prefix="/alerts", tags=["Alertas"])
 
@@ -22,6 +23,7 @@ async def get_alerts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    AlertService.refresh_alerts(db)
     query = db.query(Alert)
 
     if alert_type:
@@ -45,7 +47,8 @@ async def get_alert(alert_id: int, db: Session = Depends(get_db), current_user: 
 
 @router.post("/", response_model=AlertResponse, status_code=201)
 async def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    alert = Alert(**alert_data.model_dump(), created_at=datetime.now())
+    payload = alert_data.model_dump(by_alias=True)
+    alert = Alert(**payload, created_at=datetime.now())
     db.add(alert)
     db.commit()
     db.refresh(alert)
@@ -80,6 +83,11 @@ async def mark_all_as_read(
         "message": "Alertas marcados como lidos",
         "updated_count": updated_count
     }
+
+@router.post("/refresh")
+async def refresh_alerts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    total = AlertService.refresh_alerts(db)
+    return {"success": True, "total_alerts": total}
 
 @router.delete("/{alert_id}")
 async def delete_alert(alert_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -1,12 +1,55 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, Dict, Any
+from decimal import Decimal
+from typing import Optional, Dict, Any, List
 from datetime import date, datetime
-from app.schemas.area import AreaResponse
 from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field, validator
+
+from app.models.employee import EmployeeTypeEnum
+
+
+class EmployeeNoteBase(BaseModel):
+    note: str = Field(..., min_length=3, max_length=2000)
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeNoteCreate(EmployeeNoteBase):
+    employee_id: Optional[UUID] = None
+
+
+class EmployeeNoteResponse(EmployeeNoteBase):
+    id: UUID
+    employee_id: UUID
+    author_id: UUID
+    created_at: datetime
+
+
+class EmployeeSalaryHistoryBase(BaseModel):
+    amount: Decimal = Field(..., gt=0)
+    effective_date: date
+    reason: Optional[str] = Field(None, max_length=500)
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeSalaryHistoryCreate(EmployeeSalaryHistoryBase):
+    employee_id: Optional[UUID] = None
+
+
+class EmployeeSalaryHistoryResponse(EmployeeSalaryHistoryBase):
+    id: UUID
+    employee_id: UUID
+    created_by: Optional[UUID] = None
+    created_by_name: Optional[str] = None
+    created_at: datetime
 
 
 class EmployeeBase(BaseModel):
     """Schema base para colaborador"""
+
     nome_completo: str = Field(..., min_length=3, max_length=200)
     email_corporativo: EmailStr
     email_pessoal: Optional[EmailStr] = None
@@ -30,6 +73,10 @@ class EmployeeBase(BaseModel):
     data_proxima_1x1: Optional[date] = None
     data_ultima_1x1: Optional[date] = None
     ferias_dados: Optional[Dict[str, Any]] = None
+    tipo_cadastro: EmployeeTypeEnum = EmployeeTypeEnum.COLABORADOR
+    salario_atual: Optional[Decimal] = None
+    ultima_alteracao_salarial: Optional[date] = None
+    observacoes_internas: Optional[str] = None
 
     @validator("cpf")
     def validar_cpf(cls, v):
@@ -43,6 +90,7 @@ class EmployeeBase(BaseModel):
 
     class Config:
         from_attributes = True
+        use_enum_values = True
 
 
 class EmployeeCreate(EmployeeBase):
@@ -52,6 +100,7 @@ class EmployeeCreate(EmployeeBase):
 
 class EmployeeUpdate(BaseModel):
     """Schema para atualização parcial"""
+
     nome_completo: Optional[str] = None
     email_corporativo: Optional[EmailStr] = None
     email_pessoal: Optional[EmailStr] = None
@@ -75,9 +124,14 @@ class EmployeeUpdate(BaseModel):
     data_proxima_1x1: Optional[date] = None
     data_ultima_1x1: Optional[date] = None
     ferias_dados: Optional[Dict[str, Any]] = None
+    tipo_cadastro: Optional[EmployeeTypeEnum] = None
+    salario_atual: Optional[Decimal] = None
+    ultima_alteracao_salarial: Optional[date] = None
+    observacoes_internas: Optional[str] = None
 
     class Config:
         from_attributes = True
+        use_enum_values = True
 
 
 class EmployeeResponse(EmployeeBase):
@@ -85,6 +139,7 @@ class EmployeeResponse(EmployeeBase):
 
     class Config:
         from_attributes = True
+        use_enum_values = True
 
 
 class EmployeeListResponse(EmployeeResponse):
@@ -93,15 +148,10 @@ class EmployeeListResponse(EmployeeResponse):
 
 
 class EmployeeDetailResponse(EmployeeResponse):
-    """Schema detalhado com campos extras"""
-    data_nascimento: Optional[date] = None
-    observacoes: Optional[str] = None
-    senioridade: Optional[str] = None
-    filhos_qtd: Optional[int] = None
-    ferias_dados: Optional[Dict[str, Any]] = None
+    """Schema detalhado com histórico e observações"""
 
-    class Config:
-        from_attributes = True
+    notes: List[EmployeeNoteResponse] = Field(default_factory=list)
+    salary_history: List[EmployeeSalaryHistoryResponse] = Field(default_factory=list)
 
 
 class EmployeePDI(BaseModel):
@@ -117,16 +167,19 @@ class EmployeePDI(BaseModel):
 
 class EmployeeVacation(BaseModel):
     """Schema para férias"""
-    inicio: date
-    fim: date
-    dias: int
+    inicio: Optional[date] = None
+    fim: Optional[date] = None
+    dias: int = 0
     status: str = "PENDENTE"
+    dias_disponiveis: int = 0
+    periodos: List[Dict[str, Any]] = Field(default_factory=list)
 
     @validator("fim")
-    def validate_dates(cls, v, values):
-        if "inicio" in values and v <= values["inicio"]:
+    def validate_dates(cls, value, values):
+        inicio = values.get("inicio")
+        if value and inicio and value <= inicio:
             raise ValueError("Data final deve ser posterior à inicial")
-        return v
+        return value
 
     class Config:
         from_attributes = True

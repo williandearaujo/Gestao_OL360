@@ -36,6 +36,14 @@ export const getEmployeeById = (id: string) => api.get(`/employees/${id}`).then(
 export const createEmployee = (data: any) => api.post('/employees/', data).then((res) => res.data);
 export const updateEmployee = (id: string, data: any) => api.put(`/employees/${id}`, data).then((res) => res.data);
 export const deleteEmployee = (id: string) => api.delete(`/employees/${id}`).then((res) => res.data);
+export const getEmployeeNotes = (id: string) =>
+  api.get(`/employees/${id}/notes`).then((res) => res.data);
+export const createEmployeeNote = (id: string, data: any) =>
+  api.post(`/employees/${id}/notes`, data).then((res) => res.data);
+export const getSalaryHistory = (id: string) =>
+  api.get(`/employees/${id}/salary-history`).then((res) => res.data);
+export const addSalaryHistory = (id: string, data: any) =>
+  api.post(`/employees/${id}/salary-history`, data).then((res) => res.data);
 
 export const getTeams = () => api.get('/teams/').then((res) => res.data);
 export const createTeam = (data: any) => api.post('/teams/', data).then((res) => res.data);
@@ -45,11 +53,20 @@ export const createManagerRecord = (employeeId: string) =>
 export const getSupervisors = () => api.get('/employees/supervisors').then((res) => res.data);
 export const getKnowledge = () => api.get('/knowledge/').then((res) => res.data);
 export const createKnowledge = (data: any) => api.post('/knowledge/', data).then((res) => res.data);
+export const updateKnowledge = (id: string, data: any) =>
+  api.put(`/knowledge/${id}`, data).then((res) => res.data);
+export const deleteKnowledge = (id: string) => api.delete(`/knowledge/${id}`).then((res) => res.data);
+export const getKnowledgeSummary = () => api.get('/knowledge/summary').then((res) => res.data);
 export const getEmployeeKnowledge = () => api.get('/employee-knowledge/').then((res) => res.data);
 export const createEmployeeKnowledge = (data: any) => api.post('/employee-knowledge/', data).then((res) => res.data);
+export const updateEmployeeKnowledge = (id: string, data: any) =>
+  api.put(`/employee-knowledge/${id}`, data).then((res) => res.data);
+export const deleteEmployeeKnowledge = (id: string) =>
+  api.delete(`/employee-knowledge/${id}`).then((res) => res.data);
 export const getAreas = () => api.get('/areas/').then((res) => res.data);
 export const createArea = (data: any) => api.post('/areas/', data).then((res) => res.data);
 export const getAlerts = () => api.get('/alerts/').then((res) => res.data);
+export const refreshAlerts = () => api.post('/alerts/refresh').then((res) => res.data);
 export const getDashboardData = () => api.get('/dashboard/').then((res) => res.data);
 
 export const getDayOffs = (employeeId: string) =>
@@ -69,5 +86,9 @@ export const getPdiLogs = (employeeId: string) =>
 export const createPdiLog = (data: any) => api.post('/pdi/', data).then((res) => res.data);
 export const updatePdiLog = (id: string, data: any) => api.patch(`/pdi/${id}`, data).then((res) => res.data);
 export const deletePdiLog = (id: string) => api.delete(`/pdi/${id}`).then((res) => res.data);
+export const getEmployeeVacations = (employeeId: string) =>
+  api.get(`/vacations/${employeeId}`).then((res) => res.data);
+export const updateEmployeeVacations = (employeeId: string, data: any) =>
+  api.put(`/vacations/${employeeId}`, data).then((res) => res.data);
 
 export default api;

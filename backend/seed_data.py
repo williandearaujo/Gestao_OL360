@@ -15,7 +15,7 @@ import uuid
 try:
     from app.database import SessionLocal, engine, Base
     from app.models.user import User
-    from app.models.employee import Employee
+    from app.models.employee import Employee, EmployeeTypeEnum
     from app.models.team import Team
     from app.models.area import Area
     from app.models.manager import Manager
@@ -74,7 +74,11 @@ def seed_data(db: Session):
             senioridade="Especialista",
             status="ATIVO",
             area_id=area_diretoria.id,
-            team_id=team_diretoria.id
+            team_id=team_diretoria.id,
+            tipo_cadastro=EmployeeTypeEnum.DIRETOR,
+            salario_atual=20000,
+            ultima_alteracao_salarial=date(2024, 1, 1),
+            observacoes_internas="Responsável pela governança geral do sistema.",
         )
         db.add(admin_employee)
         db.commit()
@@ -120,7 +124,10 @@ def seed_data(db: Session):
             status="ATIVO",
             area_id=area_ti.id,
             team_id=team_dev.id,
-            manager_id=admin_manager.id # João é gerenciado pelo Willian
+            manager_id=admin_manager.id, # João é gerenciado pelo Willian
+            tipo_cadastro=EmployeeTypeEnum.COLABORADOR,
+            salario_atual=8500,
+            ultima_alteracao_salarial=date(2024, 2, 1),
         )
 
         maria_employee = Employee(
@@ -136,7 +143,10 @@ def seed_data(db: Session):
             status="ATIVO",
             area_id=area_ti.id,
             team_id=team_dev.id,
-            manager_id=admin_manager.id # Maria é gerenciada pelo Willian
+            manager_id=admin_manager.id, # Maria é gerenciada pelo Willian
+            tipo_cadastro=EmployeeTypeEnum.GERENTE,
+            salario_atual=12500,
+            ultima_alteracao_salarial=date(2024, 3, 1),
         )
 
         pedro_employee = Employee(
@@ -152,7 +162,10 @@ def seed_data(db: Session):
             status="ATIVO",
             area_id=area_ti.id,
             team_id=team_dev.id,
-            manager_id=admin_manager.id # Pedro é gerenciado pelo Willian
+            manager_id=admin_manager.id, # Pedro é gerenciado pelo Willian
+            tipo_cadastro=EmployeeTypeEnum.COLABORADOR,
+            salario_atual=5200,
+            ultima_alteracao_salarial=date(2024, 4, 1),
         )
         db.add_all([joao_employee, maria_employee, pedro_employee])
         db.commit()

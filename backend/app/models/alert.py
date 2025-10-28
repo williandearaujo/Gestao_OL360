@@ -11,6 +11,7 @@ class AlertTypeEnum(str, enum.Enum):
     CERTIFICATION_EXPIRED = "certification_expired"
     VACATION_PENDING = "vacation_pending"
     BIRTHDAY = "birthday"
+    WORK_ANNIVERSARY = "work_anniversary"
     PDI_DEADLINE = "pdi_deadline"
     ONE_ON_ONE_SCHEDULED = "one_on_one_scheduled"
     DOCUMENT_MISSING = "document_missing"

@@ -1,15 +1,37 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Plus, Users, BookOpen } from 'lucide-react'
+
 import OLCardStats from '@/components/ui/OLCardStats'
 import { OLButton } from '@/components/ui/OLButton'
-import OLModal from '@/components/ui/OLModal'
-import { Vinculo, Colaborador, Conhecimento } from '@/components/vinculos/types'
 import VinculosList from '@/components/vinculos/VinculosList'
 import VinculosModal from '@/components/vinculos/VinculosModal'
+import { Vinculo, Colaborador, Conhecimento, VinculoFormState } from '@/components/vinculos/types'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '')
+
+const createEmptyForm = (): VinculoFormState => ({
+  employee_id: '',
+  knowledge_id: '',
+  status: 'DESEJADO',
+  progresso: 25,
+  observacoes: '',
+  data_inicio: '',
+  data_limite: '',
+  data_obtencao: '',
+  data_expiracao: '',
+  certificado_url: '',
+})
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Erro inesperado.'
+
+const statusToProgress: Record<VinculoFormState['status'], number> = {
+  DESEJADO: 25,
+  OBRIGATORIO: 50,
+  OBTIDO: 100,
+}
 
 export default function VinculosPage() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
@@ -17,155 +39,174 @@ export default function VinculosPage() {
   const [vinculos, setVinculos] = useState<Vinculo[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editando, setEditando] = useState<Vinculo | null>(null)
-  const [novoVinculo, setNovoVinculo] = useState<any>({
-    employee_id: '',
-    knowledge_id: '',
-    nivel_obtido: 'BASICO',
-    status: 'DESEJADO',
-    progresso: 0,
-    observacoes: '',
-    data_inicio: '',
-    data_limite: '',
-    data_obtencao: ''
-  })
+  const [novoVinculo, setNovoVinculo] = useState<VinculoFormState>(createEmptyForm())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadVinculos()
-  }, [])
+  const authHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : ''
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
 
   const loadVinculos = async () => {
     setLoading(true)
     setError(null)
+
     try {
-      const token = localStorage.getItem('token') || ''
+      const headers = authHeaders()
       const [colabRes, conhecRes, vincRes] = await Promise.all([
-        fetch(`${API_URL}/employees`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/knowledge`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/employee-knowledge`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${BASE_URL}/employees`, { headers }),
+        fetch(`${BASE_URL}/knowledge`, { headers }),
+        fetch(`${BASE_URL}/employee-knowledge/`, { headers }),
       ])
-      const colaboradoresReal = await colabRes.json()
-      const conhecimentosReal = await conhecRes.json()
-      const vinculosReal = await vincRes.json()
+
+      if (!colabRes.ok || !conhecRes.ok || !vincRes.ok) {
+        throw new Error('Falha ao carregar informacoes de vinculos')
+      }
+
+      const colaboradoresReal = (await colabRes.json()) as Colaborador[]
+      const conhecimentosReal = (await conhecRes.json()) as Conhecimento[]
+      const vinculosReal = (await vincRes.json()) as Vinculo[]
+
       setColaboradores(colaboradoresReal)
       setConhecimentos(conhecimentosReal)
       setVinculos(
-        (vinculosReal as Vinculo[]).map(v => ({
-          ...v,
-          employee_nome: v.employee_nome || colaboradoresReal.find(c => c.id === v.employee_id)?.nome,
-          knowledge_nome: v.knowledge_nome || conhecimentosReal.find(k => k.id === v.knowledge_id)?.nome
-        }))
+        vinculosReal.map((vinculo) => {
+          const colaborador = colaboradoresReal.find((item) => item.id === vinculo.employee_id)
+          const conhecimento = conhecimentosReal.find((item) => item.id === vinculo.knowledge_id)
+          return {
+            ...vinculo,
+            employee_nome: vinculo.employee_nome || colaborador?.nome || colaborador?.nome_completo || 'Colaborador',
+            knowledge_nome: vinculo.knowledge_nome || conhecimento?.nome || 'Conhecimento',
+          }
+        }),
       )
-    } catch (e: any) {
-      setError(e.message || 'Falha ao carregar vínculos')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSalvar = async () => {
-    const token = localStorage.getItem('token') || ''
-    if (!novoVinculo.employee_id || !novoVinculo.knowledge_id || !novoVinculo.nivel_obtido) return
-    const payload = {
+  useEffect(() => {
+    loadVinculos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const buildPayload = () => {
+    const nullIfEmpty = (value: string) => (value ? value : null)
+    return {
       employee_id: novoVinculo.employee_id,
       knowledge_id: novoVinculo.knowledge_id,
-      nivel_obtido: novoVinculo.nivel_obtido,
       status: novoVinculo.status,
-      progresso: novoVinculo.progresso ?? 0,
-      observacoes: novoVinculo.observacoes || '',
-      data_inicio: novoVinculo.data_inicio || null,
-      data_limite: novoVinculo.data_limite || null,
-      data_obtencao: novoVinculo.data_obtencao || null
+      progresso: statusToProgress[novoVinculo.status],
+      observacoes: novoVinculo.observacoes.trim() ? novoVinculo.observacoes.trim() : null,
+      data_inicio: nullIfEmpty(novoVinculo.data_inicio),
+      data_limite: novoVinculo.status === 'OBTIDO' ? null : nullIfEmpty(novoVinculo.data_limite),
+      data_obtencao: novoVinculo.status === 'OBTIDO' ? nullIfEmpty(novoVinculo.data_obtencao) : null,
+      data_expiracao: novoVinculo.status === 'OBTIDO' ? nullIfEmpty(novoVinculo.data_expiracao) : null,
+      certificado_url:
+        novoVinculo.status === 'OBTIDO' && novoVinculo.certificado_url.trim()
+          ? novoVinculo.certificado_url.trim()
+          : null,
     }
-    try {
-      if (editando) {
-        await fetch(`${API_URL}/employee-knowledge/${editando.id}`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        })
-      } else {
-        await fetch(`${API_URL}/employee-knowledge`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        })
+  }
+
+  const handleStatusChange = (status: VinculoFormState['status']) => {
+    setNovoVinculo((prev) => {
+      const next: VinculoFormState = {
+        ...prev,
+        status,
+        progresso: statusToProgress[status],
       }
+      if (status === 'OBTIDO') {
+        next.data_limite = ''
+      } else {
+        next.data_obtencao = ''
+        next.data_expiracao = ''
+        next.certificado_url = ''
+      }
+      return next
+    })
+  }
+
+  const handleSalvar = async () => {
+    if (!novoVinculo.employee_id || !novoVinculo.knowledge_id) {
+      return
+    }
+
+    try {
+      const headers = {
+        ...authHeaders(),
+        'Content-Type': 'application/json',
+      }
+      const payload = buildPayload()
+
+      const endpoint = editando
+        ? `${BASE_URL}/employee-knowledge/${editando.id}`
+        : `${BASE_URL}/employee-knowledge/`
+      const method = editando ? 'PUT' : 'POST'
+
+      const response = await fetch(endpoint, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Falha ao salvar vinculo')
+      }
+
       setShowModal(false)
       setEditando(null)
-      setNovoVinculo({
-        employee_id: '',
-        knowledge_id: '',
-        nivel_obtido: 'BASICO',
-        status: 'DESEJADO',
-        progresso: 0,
-        observacoes: '',
-        data_inicio: '',
-        data_limite: '',
-        data_obtencao: ''
-      })
-      loadVinculos()
-    } catch {
-      alert('Falha ao salvar vínculo')
+      setNovoVinculo(createEmptyForm())
+      await loadVinculos()
+    } catch (err) {
+      setError(getErrorMessage(err))
     }
   }
 
   const handleEditar = (vinculo: Vinculo) => {
     setEditando(vinculo)
+    const statusValue = (vinculo.status as VinculoFormState['status']) || 'DESEJADO'
+    const progressValue = vinculo.progresso ?? statusToProgress[statusValue] ?? 0
     setNovoVinculo({
       employee_id: vinculo.employee_id,
       knowledge_id: vinculo.knowledge_id,
-      nivel_obtido: vinculo.nivel_obtido || 'BASICO',
-      status: vinculo.status,
-      progresso: vinculo.progresso ?? 0,
+      status: statusValue,
+      progresso: progressValue,
+      observacoes: vinculo.observacoes || '',
       data_inicio: vinculo.data_inicio || '',
-      data_limite: vinculo.data_limite || '',
-      data_obtencao: vinculo.data_obtencao || '',
-      observacoes: vinculo.observacoes || ''
+      data_limite: statusValue === 'OBTIDO' ? '' : vinculo.data_limite || '',
+      data_obtencao: statusValue === 'OBTIDO' ? vinculo.data_obtencao || '' : '',
+      data_expiracao: statusValue === 'OBTIDO' ? vinculo.data_expiracao || '' : '',
+      certificado_url: statusValue === 'OBTIDO' ? vinculo.certificado_url || '' : '',
     })
     setShowModal(true)
   }
 
   const handleExcluir = async (id: string) => {
-    const token = localStorage.getItem('token') || ''
-    if (confirm('Tem certeza que deseja excluir este vínculo?')) {
-      await fetch(`${API_URL}/employee-knowledge/${id}`, {
+    if (!confirm('Tem certeza que deseja excluir este vinculo?')) return
+    try {
+      const response = await fetch(`${BASE_URL}/employee-knowledge/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(),
       })
-      loadVinculos()
+      if (!response.ok) {
+        throw new Error('Falha ao excluir vinculo')
+      }
+      await loadVinculos()
+    } catch (err) {
+      setError(getErrorMessage(err))
     }
-  }
-
-  const updateProgresso = async (id: string, progresso: number) => {
-    const token = localStorage.getItem('token') || ''
-    await fetch(`${API_URL}/employee-knowledge/${id}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        progresso,
-        status: progresso === 100 ? 'OBTIDO' : progresso > 0 ? 'OBRIGATORIO' : 'DESEJADO'
-      })
-    })
-    loadVinculos()
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg flex justify-center items-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-ol-primary mx-auto mb-4"></div>
-          <p className="text-ol-text dark:text-darkOl-text">Carregando vínculos...</p>
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-4 border-ol-primary"></div>
+          <p className="text-ol-text dark:text-darkOl-text">Carregando vinculos...</p>
         </div>
       </div>
     )
@@ -174,18 +215,18 @@ export default function VinculosPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-ol-cardBg dark:bg-darkOl-cardBg border border-ol-border dark:border-darkOl-border rounded-lg p-6">
-            <h2 className="text-xl font-bold text-ol-error dark:text-darkOl-error mb-2">
-              ❌ Erro ao carregar vínculos
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-lg border border-ol-border bg-ol-cardBg p-6 dark:border-darkOl-border dark:bg-darkOl-cardBg">
+            <h2 className="mb-2 text-xl font-bold text-ol-error dark:text-darkOl-error">
+              Erro ao carregar vinculos
             </h2>
-            <p className="text-ol-text dark:text-darkOl-text mb-4">{error}</p>
+            <p className="mb-4 text-ol-text dark:text-darkOl-text">{error}</p>
             <div className="flex gap-3">
               <OLButton variant="danger" onClick={loadVinculos}>
-                Tentar Novamente
+                Tentar novamente
               </OLButton>
-              <OLButton variant="outline" onClick={() => window.location.href = "/dashboard"}>
-                Voltar ao Dashboard
+              <OLButton variant="outline" onClick={() => (window.location.href = '/dashboard')}>
+                Voltar ao dashboard
               </OLButton>
             </div>
           </div>
@@ -195,56 +236,52 @@ export default function VinculosPage() {
   }
 
   const stats = {
-    desejado: vinculos.filter(v => v.status === 'DESEJADO').length,
-    obtido: vinculos.filter(v => v.status === 'OBTIDO').length,
-    obrigatorio: vinculos.filter(v => v.status === 'OBRIGATORIO').length,
+    desejado: vinculos.filter((v) => v.status === 'DESEJADO').length,
+    obtido: vinculos.filter((v) => v.status === 'OBTIDO').length,
+    obrigatorio: vinculos.filter((v) => v.status === 'OBRIGATORIO').length,
   }
 
   return (
-    <div className="min-h-screen bg-ol-bg dark:bg-darkOl-bg p-6">
-      {/* Header */}
+    <div className="min-h-screen bg-ol-bg p-6 dark:bg-darkOl-bg">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-ol-primary dark:text-darkOl-primary flex items-center gap-3">
-            <Users className="w-8 h-8 text-ol-primary dark:text-darkOl-primary" />
-            Vínculos Colaborador-Conhecimento
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-ol-primary dark:text-darkOl-primary">
+            <Users className="h-8 w-8 text-ol-primary dark:text-darkOl-primary" />
+            Vinculos colaborador x conhecimento
           </h1>
-          <p className="text-ol-grayMedium dark:text-darkOl-grayMedium mt-2">
-            Gestão completa de vínculos • {vinculos.length} cadastrados
+          <p className="mt-2 text-ol-grayMedium dark:text-darkOl-grayMedium">
+            Gestao completa de vinculos — {vinculos.length} registros
           </p>
         </div>
         <OLButton
           variant="primary"
-          iconLeft={<Plus className="w-5 h-5" />}
+          iconLeft={<Plus className="h-5 w-5" />}
           onClick={() => setShowModal(true)}
         >
-          Novo Vínculo
+          Novo vinculo
         </OLButton>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
         <OLCardStats label="Desejado" value={stats.desejado} icon={<Users />} color="info" />
         <OLCardStats label="Obtido" value={stats.obtido} icon={<BookOpen />} color="success" />
-        <OLCardStats label="Obrigatório" value={stats.obrigatorio} icon={<Users />} color="warning" />
+        <OLCardStats label="Obrigatorio" value={stats.obrigatorio} icon={<Users />} color="warning" />
       </div>
 
-      {/* Lista de Vínculos */}
-      <VinculosList
-        vinculos={vinculos}
-        onEditar={handleEditar}
-        onExcluir={handleExcluir}
-        onUpdateProgresso={updateProgresso}
-      />
+      <VinculosList vinculos={vinculos} onEditar={handleEditar} onExcluir={handleExcluir} />
 
-      {/* Modal */}
       {showModal && (
         <VinculosModal
           visible={showModal}
           editando={editando}
           novoVinculo={novoVinculo}
           setNovoVinculo={setNovoVinculo}
-          onClose={() => setShowModal(false)}
+          onStatusChange={handleStatusChange}
+          onClose={() => {
+            setShowModal(false)
+            setEditando(null)
+            setNovoVinculo(createEmptyForm())
+          }}
           onSalvar={handleSalvar}
           colaboradores={colaboradores}
           conhecimentos={conhecimentos}
@@ -253,3 +290,5 @@ export default function VinculosPage() {
     </div>
   )
 }
+
+

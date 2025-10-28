@@ -3,7 +3,16 @@ Models Employee - Representa um Colaborador
 """
 import uuid
 from sqlalchemy import (
-    Column, String, Date, ForeignKey, Text, Boolean, Integer, DateTime
+    Column,
+    String,
+    Date,
+    ForeignKey,
+    Text,
+    Boolean,
+    Integer,
+    DateTime,
+    Enum,
+    Numeric,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -11,6 +20,7 @@ from sqlalchemy.sql import func
 
 from app.models.base import Base
 from typing import TYPE_CHECKING
+import enum
 
 if TYPE_CHECKING:
     from app.models.team import Team
@@ -20,6 +30,13 @@ if TYPE_CHECKING:
     from app.models.employee_day_off import EmployeeDayOff
     from app.models.one_on_one import EmployeeOneOnOne
     from app.models.pdi_log import EmployeePdiLog
+
+class EmployeeTypeEnum(str, enum.Enum):
+    DIRETOR = "DIRETOR"
+    GERENTE = "GERENTE"
+    COORDENADOR = "COORDENADOR"
+    COLABORADOR = "COLABORADOR"
+
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -40,6 +57,11 @@ class Employee(Base):
     cargo = Column(String(100))
     senioridade = Column(String(50)) # Ex: Trainee, Junior, Pleno, Senior, Especialista
     status = Column(String(20), default="ATIVO") # ATIVO, INATIVO, FERIAS, DAYOFF
+
+    tipo_cadastro = Column(Enum(EmployeeTypeEnum, name="employee_type_enum"), nullable=False, default=EmployeeTypeEnum.COLABORADOR)
+    salario_atual = Column(Numeric(12, 2), nullable=True)
+    ultima_alteracao_salarial = Column(Date, nullable=True)
+    observacoes_internas = Column(Text, nullable=True)
 
     # Campos para PDI e 1x1 simplificados (conforme PRD)
     data_proximo_pdi = Column(Date, nullable=True)
@@ -83,6 +105,19 @@ class Employee(Base):
     day_offs = relationship("EmployeeDayOff", back_populates="employee", cascade="all, delete-orphan")
     one_on_ones = relationship("EmployeeOneOnOne", back_populates="employee", cascade="all, delete-orphan")
     pdi_logs = relationship("EmployeePdiLog", back_populates="employee", cascade="all, delete-orphan")
+
+    salary_history = relationship(
+        "EmployeeSalaryHistory",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        order_by="desc(EmployeeSalaryHistory.effective_date)",
+    )
+    notes = relationship(
+        "EmployeeNote",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        order_by="desc(EmployeeNote.created_at)",
+    )
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

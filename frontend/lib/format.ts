@@ -32,3 +32,9 @@ export const formatStatus = (value: string | null | undefined) => {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 }
+
+export const formatCurrency = (value: number | string | null | undefined) => {
+  const amount = typeof value === 'string' ? Number(value) : value ?? 0
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount)
+}
+

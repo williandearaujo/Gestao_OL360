@@ -1,190 +1,221 @@
 // app/components/vinculos/VinculosModal.tsx
 import React from 'react'
-import { Users, BookOpen, Plus } from 'lucide-react'
-import { Vinculo, Colaborador, Conhecimento } from './types'
+import { Users, BookOpen } from 'lucide-react'
+
+import { Vinculo, Colaborador, Conhecimento, VinculoFormState } from './types'
 
 interface Props {
   visible: boolean
   editando: Vinculo | null
-  novoVinculo: any
-  setNovoVinculo: React.Dispatch<React.SetStateAction<any>>
+  novoVinculo: VinculoFormState
+  setNovoVinculo: React.Dispatch<React.SetStateAction<VinculoFormState>>
+  onStatusChange: (status: VinculoFormState['status']) => void
   onClose: () => void
   onSalvar: () => void
   colaboradores: Colaborador[]
   conhecimentos: Conhecimento[]
 }
 
-const nivelOptions = [
-  { value: 'BASICO', label: 'Básico' },
-  { value: 'INTERMEDIARIO', label: 'Intermediário' },
-  { value: 'AVANCADO', label: 'Avançado' },
-  { value: 'ESPECIALISTA', label: 'Especialista' }
-]
-
-const statusOptions = [
+const statusOptions: { value: VinculoFormState['status']; label: string }[] = [
   { value: 'DESEJADO', label: 'Desejado' },
+  { value: 'OBRIGATORIO', label: 'Obrigatorio' },
   { value: 'OBTIDO', label: 'Obtido' },
-  { value: 'OBRIGATORIO', label: 'Obrigatório' }
 ]
 
-export default function VinculosModal({
-  visible, editando, novoVinculo, setNovoVinculo,
-  onClose, onSalvar, colaboradores, conhecimentos
-}: Props) {
+const VinculosModal: React.FC<Props> = ({
+  visible,
+  editando,
+  novoVinculo,
+  setNovoVinculo,
+  onStatusChange,
+  onClose,
+  onSalvar,
+  colaboradores,
+  conhecimentos,
+}) => {
   if (!visible) return null
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">
-          {editando ? 'Editar Vínculo' : 'Novo Vínculo'}
-        </h2>
+  const isObtido = novoVinculo.status === 'OBTIDO'
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+  const colaboradorLabel = (item: Colaborador) =>
+    item.nome || item.nome_completo || 'Colaborador'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <h2 className="mb-6 text-2xl font-bold">{editando ? 'Editar vinculo' : 'Novo vinculo'}</h2>
+
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Users className="w-4 h-4 inline mr-1" />
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                <Users className="mr-1 inline h-4 w-4" />
                 Colaborador *
               </label>
               <select
                 value={novoVinculo.employee_id}
-                onChange={(e) => setNovoVinculo({ ...novoVinculo, employee_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                onChange={(event) =>
+                  setNovoVinculo({ ...novoVinculo, employee_id: event.target.value })
+                }
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Selecione um colaborador</option>
-                {colaboradores.map(colab => (
-                  <option key={colab.id} value={colab.id}>
-                    {colab.nome} - {colab.cargo}
+                {colaboradores.map((colaborador) => (
+                  <option key={colaborador.id} value={colaborador.id}>
+                    {colaboradorLabel(colaborador)}
+                    {colaborador.cargo ? ` - ${colaborador.cargo}` : ''}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <BookOpen className="w-4 h-4 inline mr-1" />
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                <BookOpen className="mr-1 inline h-4 w-4" />
                 Conhecimento *
               </label>
               <select
                 value={novoVinculo.knowledge_id}
-                onChange={(e) => setNovoVinculo({ ...novoVinculo, knowledge_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                onChange={(event) =>
+                  setNovoVinculo({ ...novoVinculo, knowledge_id: event.target.value })
+                }
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Selecione um conhecimento</option>
-                {conhecimentos.map(conhec => (
-                  <option key={conhec.id} value={conhec.id}>
-                    {conhec.nome} ({conhec.tipo})
+                {conhecimentos.map((conhecimento) => (
+                  <option key={conhecimento.id} value={conhecimento.id}>
+                    {conhecimento.nome} ({conhecimento.tipo})
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Nível Obtido *</label>
-            <select
-              value={novoVinculo.nivel_obtido}
-              onChange={(e) => setNovoVinculo({ ...novoVinculo, nivel_obtido: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              {nivelOptions.map(nivel => (
-                <option key={nivel.value} value={nivel.value}>
-                  {nivel.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={novoVinculo.status}
-              onChange={(e) => setNovoVinculo({ ...novoVinculo, status: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              {statusOptions.map(status => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
-              <input
-                type="date"
-                value={novoVinculo.data_inicio || ''}
-                onChange={(e) => setNovoVinculo({ ...novoVinculo, data_inicio: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-              />
+              <label className="mb-2 block text-sm font-medium text-gray-700">Status *</label>
+              <select
+                value={novoVinculo.status}
+                onChange={(event) => onStatusChange(event.target.value as VinculoFormState['status'])}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+              >
+                {statusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data Meta</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Data inicio</label>
               <input
                 type="date"
-                value={novoVinculo.data_limite || ''}
-                onChange={(e) => setNovoVinculo({ ...novoVinculo, data_limite: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                value={novoVinculo.data_inicio}
+                onChange={(event) =>
+                  setNovoVinculo({ ...novoVinculo, data_inicio: event.target.value })
+                }
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data Obtenção</label>
-              <input
-                type="date"
-                value={novoVinculo.data_obtencao || ''}
-                onChange={(e) => setNovoVinculo({ ...novoVinculo, data_obtencao: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
+            {!isObtido && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Data meta</label>
+                <input
+                  type="date"
+                  value={novoVinculo.data_limite}
+                  onChange={(event) =>
+                    setNovoVinculo({ ...novoVinculo, data_limite: event.target.value })
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            )}
           </div>
 
+          {isObtido && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Data obtencao *</label>
+                <input
+                  type="date"
+                  value={novoVinculo.data_obtencao}
+                  onChange={(event) =>
+                    setNovoVinculo({ ...novoVinculo, data_obtencao: event.target.value })
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Data expiracao</label>
+                <input
+                  type="date"
+                  value={novoVinculo.data_expiracao}
+                  onChange={(event) =>
+                    setNovoVinculo({ ...novoVinculo, data_expiracao: event.target.value })
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Link certificado</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={novoVinculo.certificado_url}
+                  onChange={(event) =>
+                    setNovoVinculo({ ...novoVinculo, certificado_url: event.target.value })
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Progresso: {novoVinculo.progresso ?? 0}%
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Progresso: {novoVinculo.progresso}%
             </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={novoVinculo.progresso ?? 0}
-              onChange={(e) => setNovoVinculo({ ...novoVinculo, progresso: parseInt(e.target.value) })}
-              className="w-full"
-            />
+            <input type="range" min="0" max="100" value={novoVinculo.progresso} readOnly disabled className="w-full" />
+            <p className="mt-1 text-xs text-gray-500">
+              O progresso é definido automaticamente conforme o status.
+            </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Observacoes</label>
             <textarea
               value={novoVinculo.observacoes}
-              onChange={(e) => setNovoVinculo({ ...novoVinculo, observacoes: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+              onChange={(event) =>
+                setNovoVinculo({ ...novoVinculo, observacoes: event.target.value })
+              }
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
               rows={3}
-              placeholder="Anotações sobre o desenvolvimento..."
+              placeholder="Anotacoes sobre o desenvolvimento..."
             />
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="mt-6 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50"
           >
             Cancelar
           </button>
           <button
             onClick={onSalvar}
-            disabled={!novoVinculo.employee_id || !novoVinculo.knowledge_id || !novoVinculo.nivel_obtido}
-            className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!novoVinculo.employee_id || !novoVinculo.knowledge_id}
+            className="flex-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {editando ? 'Salvar Alterações' : 'Criar Vínculo'}
+            {editando ? 'Salvar alteracoes' : 'Criar vinculo'}
           </button>
         </div>
       </div>
     </div>
   )
 }
+
+export default VinculosModal
