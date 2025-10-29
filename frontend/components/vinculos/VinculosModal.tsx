@@ -1,5 +1,5 @@
 // app/components/vinculos/VinculosModal.tsx
-import React from 'react'
+import React, { useState } from 'react'
 import { Users, BookOpen } from 'lucide-react'
 
 import { Vinculo, Colaborador, Conhecimento, VinculoFormState } from './types'
@@ -22,6 +22,13 @@ const statusOptions: { value: VinculoFormState['status']; label: string }[] = [
   { value: 'OBTIDO', label: 'Obtido' },
 ]
 
+const knowledgeTypeOptions = [
+  { value: 'CERTIFICACAO', label: 'Certificação' },
+  { value: 'CURSO', label: 'Curso' },
+  { value: 'IDIOMA', label: 'Idioma' },
+  { value: 'FORMACAO', label: 'Formação' },
+]
+
 const VinculosModal: React.FC<Props> = ({
   visible,
   editando,
@@ -33,12 +40,18 @@ const VinculosModal: React.FC<Props> = ({
   colaboradores,
   conhecimentos,
 }) => {
+  const [tipoFiltro, setTipoFiltro] = useState('')
+
   if (!visible) return null
 
   const isObtido = novoVinculo.status === 'OBTIDO'
 
   const colaboradorLabel = (item: Colaborador) =>
     item.nome || item.nome_completo || 'Colaborador'
+
+  const filteredConhecimentos = tipoFiltro
+    ? conhecimentos.filter((c) => c.tipo === tipoFiltro)
+    : conhecimentos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -68,7 +81,25 @@ const VinculosModal: React.FC<Props> = ({
                 ))}
               </select>
             </div>
+            <div />
+          </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Tipo de Conhecimento</label>
+              <select
+                value={tipoFiltro}
+                onChange={(e) => setTipoFiltro(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="">Todos os tipos</option>
+                {knowledgeTypeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 <BookOpen className="mr-1 inline h-4 w-4" />
@@ -82,9 +113,9 @@ const VinculosModal: React.FC<Props> = ({
                 className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Selecione um conhecimento</option>
-                {conhecimentos.map((conhecimento) => (
+                {filteredConhecimentos.map((conhecimento) => (
                   <option key={conhecimento.id} value={conhecimento.id}>
-                    {conhecimento.nome} ({conhecimento.tipo})
+                    {conhecimento.nome}
                   </option>
                 ))}
               </select>
@@ -146,17 +177,6 @@ const VinculosModal: React.FC<Props> = ({
                   }
                   className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
                   required
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Data expiracao</label>
-                <input
-                  type="date"
-                  value={novoVinculo.data_expiracao}
-                  onChange={(event) =>
-                    setNovoVinculo({ ...novoVinculo, data_expiracao: event.target.value })
-                  }
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <div>

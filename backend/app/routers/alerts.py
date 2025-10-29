@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
 
@@ -8,6 +8,7 @@ from app.models.alert import Alert, AlertTypeEnum, AlertPriorityEnum
 from app.schemas.alert import AlertCreate, AlertUpdate, AlertResponse
 from app.core.security import get_current_user
 from app.models.user import User
+from app.models.employee import Employee, EmployeeTypeEnum
 from app.services.alert_service import AlertService
 
 router = APIRouter(prefix="/alerts", tags=["Alertas"])
@@ -26,6 +27,29 @@ async def get_alerts(
     AlertService.refresh_alerts(db)
     query = db.query(Alert)
 
+    # Authorization logic
+    if not current_user.is_admin:
+        employee = db.query(Employee).filter(Employee.id == current_user.employee_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found for the current user")
+
+        if employee.tipo_cadastro == EmployeeTypeEnum.DIRETOR:
+            # Directors can see all alerts
+            pass
+        elif employee.tipo_cadastro in [EmployeeTypeEnum.GERENTE, EmployeeTypeEnum.COORDENADOR]:
+            # Managers can see alerts for their team
+            manager = employee.manager_profile
+            if manager:
+                managed_employee_ids = [emp.id for emp in manager.employees]
+                query = query.filter(Alert.employee_id.in_(managed_employee_ids))
+            else:
+                # If the user is a manager but has no manager profile, they can only see their own alerts
+                query = query.filter(Alert.employee_id == current_user.employee_id)
+        else:
+            # Collaborators can only see their own alerts
+            query = query.filter(Alert.employee_id == current_user.employee_id)
+
+
     if alert_type:
         query = query.filter(Alert.type == alert_type)
     if priority:
@@ -43,10 +67,12 @@ async def get_alert(alert_id: int, db: Session = Depends(get_db), current_user: 
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta não encontrado")
+    # TODO: Add authorization to check if the user can see this specific alert
     return alert
 
 @router.post("/", response_model=AlertResponse, status_code=201)
 async def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # TODO: Add authorization to check if the user can create alerts
     payload = alert_data.model_dump(by_alias=True)
     alert = Alert(**payload, created_at=datetime.now())
     db.add(alert)
@@ -59,6 +85,7 @@ async def mark_alert_as_read(alert_id: int, db: Session = Depends(get_db), curre
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta não encontrado")
+    # TODO: Add authorization to check if the user can mark this alert as read
     alert.is_read = True
     db.commit()
     db.refresh(alert)
@@ -72,6 +99,7 @@ async def mark_all_as_read(
     current_user: User = Depends(get_current_user)
 ):
     query = db.query(Alert).filter(Alert.is_read == False)
+    # TODO: Add authorization logic similar to get_alerts
     if alert_type:
         query = query.filter(Alert.type == alert_type)
     if employee_id:
@@ -94,6 +122,7 @@ async def delete_alert(alert_id: int, db: Session = Depends(get_db), current_use
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta não encontrado")
+    # TODO: Add authorization to check if the user can delete this alert
     db.delete(alert)
     db.commit()
     return {"success": True, "message": "Alerta deletado com sucesso"}

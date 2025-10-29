@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.security import get_current_user
 from app.database import get_db
 from app.models.employee_knowledge import EmployeeKnowledge, StatusEnum as KnowledgeLinkStatus
-from app.models.knowledge import Knowledge
+from app.models.knowledge import Knowledge, KnowledgeCategoryEnum
 from app.models.user import User
 from app.schemas.employee_knowledge import (
     EmployeeKnowledgeCreate,
@@ -30,7 +30,12 @@ def _add_months(base_date: date, months: int) -> date:
 
 
 def _compute_expiration(knowledge: Knowledge, data_obtencao: Optional[date]) -> Optional[date]:
-    if not knowledge or not knowledge.validade_meses or not data_obtencao:
+    if (
+        not knowledge
+        or not knowledge.validade_meses
+        or not data_obtencao
+        or knowledge.tipo != KnowledgeCategoryEnum.CERTIFICACAO
+    ):
         return None
     return _add_months(data_obtencao, knowledge.validade_meses)
 

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Plus, Users, BookOpen } from 'lucide-react'
+import { Plus, Users, BookOpen, AlertOctagon } from 'lucide-react'
 
 import OLCardStats from '@/components/ui/OLCardStats'
 import { OLButton } from '@/components/ui/OLButton'
@@ -42,6 +42,7 @@ export default function VinculosPage() {
   const [novoVinculo, setNovoVinculo] = useState<VinculoFormState>(createEmptyForm())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showExpiredOnly, setShowExpiredOnly] = useState(false)
 
   const authHeaders = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : ''
@@ -54,10 +55,14 @@ export default function VinculosPage() {
 
     try {
       const headers = authHeaders()
+      const vinculosUrl = showExpiredOnly
+        ? `${BASE_URL}/employee-knowledge/?vencido=true`
+        : `${BASE_URL}/employee-knowledge/`
+
       const [colabRes, conhecRes, vincRes] = await Promise.all([
         fetch(`${BASE_URL}/employees`, { headers }),
         fetch(`${BASE_URL}/knowledge`, { headers }),
-        fetch(`${BASE_URL}/employee-knowledge/`, { headers }),
+        fetch(vinculosUrl, { headers }),
       ])
 
       if (!colabRes.ok || !conhecRes.ok || !vincRes.ok) {
@@ -91,7 +96,7 @@ export default function VinculosPage() {
   useEffect(() => {
     loadVinculos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [showExpiredOnly])
 
   const buildPayload = () => {
     const nullIfEmpty = (value: string) => (value ? value : null)
@@ -154,7 +159,13 @@ export default function VinculosPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Falha ao salvar vinculo')
+        if (response.status === 400) {
+          const errorData = await response.json();
+          if (errorData.detail === 'Este vinculo ja esta cadastrado.') {
+            throw new Error('Este vínculo já está cadastrado. Não é possível adicionar duplicatas.');
+          }
+        }
+        throw new Error('Falha ao salvar vinculo');
       }
 
       setShowModal(false)
@@ -239,6 +250,7 @@ export default function VinculosPage() {
     desejado: vinculos.filter((v) => v.status === 'DESEJADO').length,
     obtido: vinculos.filter((v) => v.status === 'OBTIDO').length,
     obrigatorio: vinculos.filter((v) => v.status === 'OBRIGATORIO').length,
+    vencidos: vinculos.filter((v) => v.vencido).length,
   }
 
   return (
@@ -266,6 +278,20 @@ export default function VinculosPage() {
         <OLCardStats label="Desejado" value={stats.desejado} icon={<Users />} color="info" />
         <OLCardStats label="Obtido" value={stats.obtido} icon={<BookOpen />} color="success" />
         <OLCardStats label="Obrigatorio" value={stats.obrigatorio} icon={<Users />} color="warning" />
+        <OLCardStats label="Vencidos" value={stats.vencidos} icon={<AlertOctagon />} color="danger" />
+      </div>
+
+      <div className="mb-4 flex items-center">
+        <input
+          type="checkbox"
+          id="expired-filter"
+          checked={showExpiredOnly}
+          onChange={(e) => setShowExpiredOnly(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+        />
+        <label htmlFor="expired-filter" className="ml-2 block text-sm font-medium text-gray-700">
+          Mostrar apenas vencidos
+        </label>
       </div>
 
       <VinculosList vinculos={vinculos} onEditar={handleEditar} onExcluir={handleExcluir} />
@@ -290,5 +316,3 @@ export default function VinculosPage() {
     </div>
   )
 }
-
-

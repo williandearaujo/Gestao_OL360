@@ -1,7 +1,7 @@
 // app/components/vinculos/VinculosList.tsx
 import React from 'react'
 import { Vinculo } from './types'
-import { Users, BookOpen, Calendar, Target, Edit, Trash2 } from 'lucide-react'
+import { Users, BookOpen, Calendar, Target, Edit, Trash2, AlertTriangle } from 'lucide-react'
 
 interface Props {
   vinculos: Vinculo[]
@@ -62,6 +62,20 @@ const VinculosList: React.FC<Props> = ({ vinculos, onEditar, onExcluir }) => {
                     {vinculo.status === 'OBTIDO' && vinculo.data_obtencao && (
                       <span className="font-medium text-green-600">
                         Obtido em {new Date(vinculo.data_obtencao).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                    {vinculo.data_expiracao && (
+                      <span
+                        className={`flex items-center gap-1 font-medium ${
+                          vinculo.vencido
+                            ? 'text-red-600'
+                            : vinculo.dias_para_expirar != null && vinculo.dias_para_expirar < 60
+                            ? 'text-yellow-600'
+                            : 'text-gray-600'
+                        }`}
+                      >
+                        <AlertTriangle className="h-4 w-4" />
+                        {vinculo.vencido ? 'Expirou em:' : 'Expira em:'} {new Date(vinculo.data_expiracao).toLocaleDateString('pt-BR')}
                       </span>
                     )}
                   </div>

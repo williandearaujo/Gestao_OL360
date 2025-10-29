@@ -3,9 +3,11 @@ from typing import Optional, Dict, Any, List
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator, computed_field
 
 from app.models.employee import EmployeeTypeEnum
+from app.schemas.area import AreaResponse
+from app.schemas.manager import ManagerResponse
 
 
 class EmployeeNoteBase(BaseModel):
@@ -136,6 +138,15 @@ class EmployeeUpdate(BaseModel):
 
 class EmployeeResponse(EmployeeBase):
     id: UUID
+    area: Optional[AreaResponse] = None
+    manager: Optional[ManagerResponse] = None
+
+    @computed_field
+    @property
+    def manager_employee_id(self) -> Optional[UUID]:
+        if self.manager:
+            return self.manager.employee_id
+        return None
 
     class Config:
         from_attributes = True

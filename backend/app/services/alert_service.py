@@ -36,6 +36,7 @@ class AlertService:
         AlertTypeEnum.BIRTHDAY,
         AlertTypeEnum.WORK_ANNIVERSARY,
         AlertTypeEnum.CERTIFICATION_EXPIRING,
+        AlertTypeEnum.CERTIFICATION_EXPIRED,
         AlertTypeEnum.PDI_DEADLINE,
         AlertTypeEnum.ONE_ON_ONE_SCHEDULED,
     }
@@ -55,6 +56,7 @@ class AlertService:
             cls._generate_birthdays(db),
             cls._generate_work_anniversaries(db),
             cls._generate_certification_expiring(db),
+            cls._generate_certification_expired(db),
             cls._generate_pdi_alerts(db),
             cls._generate_one_on_one_alerts(db),
         )
@@ -197,6 +199,44 @@ class AlertService:
                     "knowledge_nome": knowledge.nome,
                     "data_expiracao": record.data_expiracao.isoformat(),
                     "days_until": days,
+                },
+            )
+
+    @staticmethod
+    def _generate_certification_expired(db: Session) -> Iterable[AlertPayload]:
+        today = date.today()
+        records = (
+            db.query(EmployeeKnowledge)
+            .options(
+                joinedload(EmployeeKnowledge.employee),
+                joinedload(EmployeeKnowledge.knowledge),
+            )
+            .filter(
+                EmployeeKnowledge.status == KnowledgeLinkStatus.OBTIDO,
+                EmployeeKnowledge.data_expiracao.isnot(None),
+                EmployeeKnowledge.data_expiracao < today,
+            )
+            .all()
+        )
+        for record in records:
+            employee = record.employee
+            knowledge = record.knowledge
+            if not employee or not knowledge:
+                continue
+            days_expired = (today - record.data_expiracao).days
+            yield AlertPayload(
+                type=AlertTypeEnum.CERTIFICATION_EXPIRED,
+                priority=AlertPriorityEnum.CRITICAL,
+                title=f"Certificação '{knowledge.nome}' expirada",
+                message=f"A certificação de {employee.nome_completo} expirou em {record.data_expiracao.strftime('%d/%m/%Y')} (há {days_expired} dia(s)).",
+                employee_id=employee.id,
+                employee_name=employee.nome_completo,
+                meta_key=f"cert-expired-{employee.id}-{knowledge.id}",
+                meta_data={
+                    "knowledge_id": str(knowledge.id),
+                    "knowledge_nome": knowledge.nome,
+                    "data_expiracao": record.data_expiracao.isoformat(),
+                    "days_expired": days_expired,
                 },
             )
 

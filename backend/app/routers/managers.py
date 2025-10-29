@@ -5,7 +5,7 @@
 Router de Gestores
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.database import get_db
@@ -23,7 +23,7 @@ async def list_managers(
     current_user: User = Depends(get_current_user)
 ):
     """Lista todos os gestores"""
-    managers = db.query(Manager).all()
+    managers = db.query(Manager).options(joinedload(Manager.employee)).all()
     return managers
 
 

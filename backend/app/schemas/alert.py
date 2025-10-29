@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 class AlertType(str, Enum):
     certification_expiring = "certification_expiring"
@@ -26,7 +27,7 @@ class AlertBase(BaseModel):
     priority: AlertPriority
     title: str
     message: str
-    employee_id: Optional[str] = None
+    employee_id: Optional[UUID] = None
     employee_name: Optional[str] = None
     related_id: Optional[int] = None
     related_type: Optional[str] = None

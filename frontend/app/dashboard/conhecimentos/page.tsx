@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Plus, Edit } from 'lucide-react';
 import OLCardStats from '@/components/ui/OLCardStats';
 import { OLButton } from '@/components/ui/OLButton';
@@ -338,7 +339,9 @@ const KnowledgeDashboard: React.FC = () => {
               filteredItems.map((item) => (
                 <tr key={item.id} className="bg-white dark:bg-darkOl-cardBg">
                   <td className="px-4 py-3 font-medium text-ol-text dark:text-darkOl-text">
-                    {item.nome}
+                    <Link href={`/dashboard/conhecimentos/${item.id}`} className="hover:underline">
+                      {item.nome}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-ol-grayMedium dark:text-darkOl-grayMedium">
                     {formatStatus(item.tipo)}

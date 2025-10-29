@@ -52,12 +52,13 @@ export const createManagerRecord = (employeeId: string) =>
   api.post('/managers/', { employee_id: employeeId }).then((res) => res.data);
 export const getSupervisors = () => api.get('/employees/supervisors').then((res) => res.data);
 export const getKnowledge = () => api.get('/knowledge/').then((res) => res.data);
+export const getKnowledgeById = (id: string) => api.get(`/knowledge/${id}`).then((res) => res.data);
 export const createKnowledge = (data: any) => api.post('/knowledge/', data).then((res) => res.data);
 export const updateKnowledge = (id: string, data: any) =>
   api.put(`/knowledge/${id}`, data).then((res) => res.data);
 export const deleteKnowledge = (id: string) => api.delete(`/knowledge/${id}`).then((res) => res.data);
 export const getKnowledgeSummary = () => api.get('/knowledge/summary').then((res) => res.data);
-export const getEmployeeKnowledge = () => api.get('/employee-knowledge/').then((res) => res.data);
+export const getEmployeeKnowledge = (params?: { knowledge_id?: string }) => api.get('/employee-knowledge/', { params }).then((res) => res.data);
 export const createEmployeeKnowledge = (data: any) => api.post('/employee-knowledge/', data).then((res) => res.data);
 export const updateEmployeeKnowledge = (id: string, data: any) =>
   api.put(`/employee-knowledge/${id}`, data).then((res) => res.data);

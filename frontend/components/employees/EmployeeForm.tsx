@@ -97,29 +97,44 @@ type EmployeeInitialData = Partial<EmployeeFormState> & {
 
 const mergeInitialState = (initialData: EmployeeInitialData): EmployeeFormState => {
   const merged = { ...DEFAULT_STATE, ...initialData };
+
   return {
-    ...DEFAULT_STATE,
-    ...merged,
-    status: merged.status || 'ATIVO',
+    nome_completo: merged.nome_completo ?? '',
+    email_corporativo: merged.email_corporativo ?? '',
+    email_pessoal: merged.email_pessoal ?? '',
     telefone_corporativo: merged.telefone_corporativo
       ? maskPhone(String(merged.telefone_corporativo))
       : '',
     telefone_pessoal: merged.telefone_pessoal ? maskPhone(String(merged.telefone_pessoal)) : '',
+    contato_emergencia_nome: merged.contato_emergencia_nome ?? '',
     contato_emergencia_telefone: merged.contato_emergencia_telefone
       ? maskPhone(String(merged.contato_emergencia_telefone))
       : '',
-    cpf: merged.cpf ? maskCPF(String(merged.cpf)) : '',
-    cep: merged.cep ? maskCEP(String(merged.cep)) : '',
+    tipo_cadastro: (merged.tipo_cadastro as EmployeeType) ?? 'COLABORADOR',
+    cargo: merged.cargo ?? '',
+    senioridade: merged.senioridade ?? '',
+    area_id: merged.area_id ?? '',
+    team_id: merged.team_id ?? '',
+    manager_id: (merged.manager_employee_id as string) ?? '',
+    status: merged.status ?? 'ATIVO',
     data_nascimento: merged.data_nascimento
       ? String(merged.data_nascimento).split('T')[0]
       : '',
     data_admissao: merged.data_admissao ? String(merged.data_admissao).split('T')[0] : '',
+    cpf: merged.cpf ? maskCPF(String(merged.cpf)) : '',
+    rg: merged.rg ?? '',
+    cep: merged.cep ? maskCEP(String(merged.cep)) : '',
+    logradouro: merged.logradouro || merged.endereco_completo || '',
+    numero: String(merged.numero ?? ''),
+    complemento: merged.complemento ?? '',
+    bairro: merged.bairro ?? '',
+    cidade: merged.cidade ?? '',
+    estado: merged.estado ?? '',
     salario_atual: merged.salario_atual ? String(merged.salario_atual) : '',
     ultima_alteracao_salarial: merged.ultima_alteracao_salarial
       ? String(merged.ultima_alteracao_salarial).split('T')[0]
       : '',
     observacoes_internas: merged.observacoes_internas ?? '',
-    logradouro: merged.logradouro || merged.endereco_completo || '',
   };
 };
 
@@ -144,7 +159,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employeeId, initialData = {
 
   useEffect(() => {
     setFormData(mergeInitialState(initialData));
-  }, [initialData]);
+  }, [initialData?.id]);
 
   useEffect(() => {
     const fetchFormData = async () => {
@@ -169,7 +184,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employeeId, initialData = {
 
   const requiresManager = formData.tipo_cadastro !== 'DIRETOR';
 
-  const handleValueChange =
+  const handleValueChange = React.useCallback(
     (field: keyof EmployeeFormState) =>
     (value: string): void => {
       setFormData((prev) => {
@@ -183,7 +198,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employeeId, initialData = {
         }
         return { ...prev, [field]: value };
       });
-    };
+    },
+    [],
+  );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;

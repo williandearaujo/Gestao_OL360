@@ -16,6 +16,7 @@ type EmployeeListItem = {
   email_corporativo?: string | null
   status?: string | null
   area?: { nome?: string | null } | null
+  manager?: { employee?: { nome_completo?: string | null } | null } | null
 }
 
 interface ModalState {
@@ -175,7 +176,7 @@ export default function ColaboradoresPage() {
                       {employee.nome_completo}
                     </div>
                     <div className="text-xs text-ol-grayMedium dark:text-darkOl-grayMedium">
-                      {employee.area?.nome ?? "Sem area definida"}
+                      {employee.area?.nome ?? "Sem area definida"} / {employee.manager?.employee?.nome_completo ?? "Sem gestor"}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-ol-text dark:text-darkOl-text">

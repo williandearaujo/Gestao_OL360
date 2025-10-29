@@ -37,7 +37,7 @@ async def list_employees(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Employee).options(joinedload(Employee.area))
+    query = db.query(Employee).options(joinedload(Employee.area), joinedload(Employee.manager))
     if search: query = query.filter(or_(Employee.nome_completo.ilike(f"%{search}%"), Employee.email_corporativo.ilike(f"%{search}%")))
     if status: query = query.filter(Employee.status == status)
     if team_id: query = query.filter(Employee.team_id == team_id)
@@ -48,18 +48,32 @@ async def list_employees(
 
 @router.get("/supervisors", response_model=List[EmployeeResponse])
 async def list_supervisors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    supervisor_types = (
-        EmployeeTypeEnum.DIRETOR,
-        EmployeeTypeEnum.GERENTE,
-        EmployeeTypeEnum.COORDENADOR,
-    )
-    query = (
-        db.query(Employee)
-        .options(joinedload(Employee.area))
-        .filter(Employee.tipo_cadastro.in_(supervisor_types))
-        .order_by(Employee.nome_completo)
-    )
-    return query.all()
+    # Primeiro, tente obter os gestores efetivos a partir da tabela `managers`
+    managers = db.query(Manager).options(joinedload(Manager.employee)).all()
+    supervisors = []
+    for m in managers:
+        if m.employee:
+            supervisors.append(m.employee)
+
+    # Se não encontrou nenhum manager na tabela, como fallback, retorna employees
+    # cujo tipo de cadastro seja Diretor/Gerente/Coordenador (compatibilidade retroativa)
+    if not supervisors:
+        supervisor_types = (
+            EmployeeTypeEnum.DIRETOR,
+            EmployeeTypeEnum.GERENTE,
+            EmployeeTypeEnum.COORDENADOR,
+        )
+        query = (
+            db.query(Employee)
+            .options(joinedload(Employee.area))
+            .filter(Employee.tipo_cadastro.in_(supervisor_types))
+            .order_by(Employee.nome_completo)
+        )
+        return query.all()
+
+    # Ordenar supervisores por nome
+    supervisors.sort(key=lambda e: e.nome_completo if e and getattr(e, 'nome_completo', None) else '')
+    return supervisors
 
 @router.get("/{employee_id}", response_model=EmployeeDetailResponse)
 async def get_employee(employee_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
